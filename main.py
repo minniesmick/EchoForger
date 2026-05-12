@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 # ── Qt uygulama örneği — widget'lardan önce oluşturulmalı ─────────────────────
 def _create_app() -> QApplication:
     # High-DPI: Qt6'da varsayılan açık, ancak Windows'ta bazen elle tetiklenir
-    QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
+    # QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)  # Qt6'da varsayılan açık veya kaldırıldı
 
     app = QApplication(sys.argv)
     app.setApplicationName("EchoForge")
