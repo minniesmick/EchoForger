@@ -1,0 +1,38 @@
+# ════════════════════════════════════════════════
+#  EchoForge — Python Bağımlılıkları
+#  Python 3.10 veya üzeri önerilir.
+#
+#  Kurulum:
+#      pip install -r requirements.txt
+#
+#  GPU (CUDA) desteği için PyTorch'u ayrıca kur:
+#      pip install torch --index-url https://download.pytorch.org/whl/cu121
+#
+#  Fish Speech ayrı bir sanal ortamda (.venv_fish) çalışır;
+#  bu dosya yalnızca ana ortam (.venv) içindir.
+# ════════════════════════════════════════════════
+
+# ── GUI ──────────────────────────────────────────
+PyQt6>=6.6.0
+
+# ── Speech-to-Text (STT) ─────────────────────────
+faster-whisper>=1.0.0       # CTranslate2 tabanlı Whisper backend
+# ctranslate2 faster-whisper ile otomatik gelir; GPU için CUDA 12.x gerekli
+
+# ── Text-to-Speech (TTS) — XTTSv2 ───────────────
+TTS>=0.22.0                  # Coqui TTS (XTTSv2 dahil)
+torch>=2.0.0,<2.1.0          # Coqui TTS torch 2.0.x gerektirir
+torchaudio>=2.0.0,<2.1.0
+
+# ── Ses işleme ────────────────────────────────────
+soundfile>=0.12.1            # Waveform okuma (libsndfile backend)
+numpy>=1.24.0
+pydub>=0.25.1                # Ses parçalarını birleştirme
+# pydub için sistem bağımlılığı: ffmpeg (PATH'te olmalı)
+# → https://ffmpeg.org/download.html
+
+# ── Görselleştirme ────────────────────────────────
+pyqtgraph>=0.13.3            # Waveform widget (Qt-native, hızlı)
+
+# ── Yardımcı ─────────────────────────────────────
+requests>=2.31.0             # Model indirme kontrolleri (opsiyonel)

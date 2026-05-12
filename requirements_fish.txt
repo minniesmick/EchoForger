@@ -1,0 +1,4 @@
+# ── Metin Ön İşleme & Ses Birleştirme ────────────────────────────────────────
+# pydub: ChunkedTTSWorker'ın ses parçalarını birleştirmesi için gereklidir.
+# NOT: pydub ffmpeg'e ihtiyaç duyar; PATH'te erişilebilir olmalıdır.
+pydub>=0.25.1
