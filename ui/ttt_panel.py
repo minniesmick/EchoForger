@@ -118,6 +118,15 @@ class TTTPanel(QWidget):
         lbl.setObjectName("status_label")
         layout.addWidget(lbl)
 
+        backend_lbl = QLabel("Motor:")
+        backend_lbl.setObjectName("status_label")
+        layout.addWidget(backend_lbl)
+
+        self.backend_combo = QComboBox()
+        self.backend_combo.addItems(["Ollama", "Gemini"])
+        self.backend_combo.currentTextChanged.connect(self._on_backend_changed)
+        layout.addWidget(self.backend_combo)
+
         self.model_combo = QComboBox()
         self.model_combo.setMinimumWidth(220)
         self.model_combo.setPlaceholderText("— model listesi yükleniyor —")
@@ -147,6 +156,20 @@ class TTTPanel(QWidget):
         self._fetch_models()
 
         return bar
+
+    def _on_backend_changed(self, backend: str) -> None:
+        self._current_model = None
+        self.btn_load.setEnabled(True)
+        self.btn_load.setText("⚡  Modeli Yükle")
+        self.btn_send.setEnabled(False)
+        self.status_lbl.setText("● Bağlı değil")
+        self.status_lbl.setStyleSheet(
+            f"color: {COLORS['text_muted']}; font-size: 12px;"
+        )
+        self._fetch_models()
+
+    def _get_backend(self) -> str:
+        return self.backend_combo.currentText().lower()  # "ollama" | "gemini"
 
     # ── Metin alanları ────────────────────────────────────────────────
 
@@ -302,7 +325,12 @@ class TTTPanel(QWidget):
     def _fetch_models(self) -> None:
         self.btn_refresh.setEnabled(False)
         self.model_combo.setEnabled(False)
-        self._fetch_worker = ModelFetchWorker()
+        if self._get_backend() == "gemini":
+            from core.gemini_client import ModelFetchWorker as GeminiFetch
+            self._fetch_worker = GeminiFetch()
+        else:
+            from core.ollama_client import ModelFetchWorker
+            self._fetch_worker = ModelFetchWorker()
         self._fetch_worker.finished.connect(self._on_models_fetched)
         self._fetch_worker.error.connect(self._on_fetch_error)
         self._fetch_worker.start()
@@ -344,10 +372,12 @@ class TTTPanel(QWidget):
             return
 
         self._set_busy(True)
-        self._switch_worker = ModelSwitchWorker(
-            old_model=self._current_model,
-            new_model=new_model,
-        )
+        if self._get_backend() == "gemini":
+            from core.gemini_client import ModelSwitchWorker as GeminiSwitch
+            self._switch_worker = GeminiSwitch(self._current_model, new_model)
+        else:
+            from core.ollama_client import ModelSwitchWorker
+            self._switch_worker = ModelSwitchWorker(self._current_model, new_model)
         self._switch_worker.progress.connect(self._log)
         self._switch_worker.finished.connect(
             lambda: self._on_model_ready(new_model)
@@ -400,7 +430,12 @@ class TTTPanel(QWidget):
         self._set_generating(True)
 
         self.timing_lbl.setText("⏱ Bekleniyor…")
-        self._gen_worker = GenerateWorker(self._current_model, prompt)
+        if self._get_backend() == "gemini":
+            from core.gemini_client import GenerateWorker as GeminiGen
+            self._gen_worker = GeminiGen(self._current_model, prompt)
+        else:
+            from core.ollama_client import GenerateWorker
+            self._gen_worker = GenerateWorker(self._current_model, prompt)
         self._gen_worker.token.connect(self._on_token)
         self._gen_worker.first_token.connect(self._on_first_token)
         self._gen_worker.finished.connect(self._on_generation_done)

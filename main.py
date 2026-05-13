@@ -46,10 +46,18 @@ def _show_fatal_error(exc: BaseException) -> None:
 
 
 def main() -> int:
-    app = _create_app()
+    from core.environment import Environment
+    env = Environment.instance()
 
+    # Colab modunda Gradio başlat (sonraki adımda)
+    if env.is_colab():
+        from colab_ui import launch_gradio  # adım 5'te yazılacak
+        launch_gradio()
+        return 0
+
+    app = _create_app()
     try:
-        from ui.main_window import MainWindow   # geç import — Qt hazır olduktan sonra
+        from ui.main_window import MainWindow
         window = MainWindow()
         window.show()
     except Exception:                           # noqa: BLE001

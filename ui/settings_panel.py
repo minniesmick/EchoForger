@@ -94,6 +94,10 @@ class SettingsPanel(QWidget):
         )
         self.output_dir_edit.setPlaceholderText("Boş = varsayılan (proje/output/)")
         form.addRow("Çıktı Dizini:", self.output_dir_edit)
+        self.gemini_key_edit = QLineEdit()
+        self.gemini_key_edit.setPlaceholderText("AIza...")
+        self.gemini_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("Gemini API Key:", self.gemini_key_edit)
 
         return group
 
@@ -137,6 +141,7 @@ class SettingsPanel(QWidget):
         self.output_dir_edit.setText(self._sm.get("output_dir"))
         self.chunk_spin.setValue(int(self._sm.get("chunk_threshold")))
         self.silence_spin.setValue(int(self._sm.get("silence_ms")))
+        self.gemini_key_edit.setText(self._sm.get("gemini_api_key", ""))
 
     def _on_save(self) -> None:
         self._sm.set_many({
@@ -145,6 +150,7 @@ class SettingsPanel(QWidget):
             "output_dir":      self.output_dir_edit.text().strip(),
             "chunk_threshold": self.chunk_spin.value(),
             "silence_ms":      self.silence_spin.value(),
+            "gemini_api_key": self.gemini_key_edit.text().strip(),
         })
         QMessageBox.information(self, "Ayarlar", "Ayarlar kaydedildi. ✓")
 

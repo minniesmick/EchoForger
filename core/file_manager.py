@@ -19,20 +19,37 @@ import shutil
 from pathlib import Path
 from typing import List
 
+from core.environment import Environment
 
-# ── Kök dizin (core/ klasörünün bir üstü = proje kökü) ───────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# ── STT klasörleri ────────────────────────────────────────────────────────────
-VOICE_DIR    = PROJECT_ROOT / "voice_files"
+def _resolve_output_dir() -> Path:
+    """Ortama göre output dizinini döner."""
+    env = Environment.instance()
+    custom = env.resolve_path("output_dir")
+    # Colab'da GDrive'a, lokalde proje altına
+    if env.is_colab():
+        return custom
+    # Lokal: settings boşsa proje kökü altı
+    from core.settings_manager import SettingsManager
+    raw = SettingsManager.instance().get("output_dir", "")
+    if raw:
+        return Path(raw)
+    return Path(__file__).resolve().parent.parent / "output"
 
-# ── TTS klasörleri ────────────────────────────────────────────────────────────
+
+# ── Kök dizin ────────────────────────────────────────────────────────────────
+PROJECT_ROOT = Environment.instance().project_root()
+
+# ── STT klasörleri ───────────────────────────────────────────────────────────
+VOICE_DIR            = PROJECT_ROOT / "voice_files"
+
+# ── TTS klasörleri ───────────────────────────────────────────────────────────
 REFERENCE_VOICES_DIR = PROJECT_ROOT / "reference_voices"
 
-# ── Çıktı klasörleri ──────────────────────────────────────────────────────────
-OUTPUT_DIR        = PROJECT_ROOT / "output"
-TRANSCRIPTS_DIR   = OUTPUT_DIR / "transcripts"
-AUDIO_DIR         = OUTPUT_DIR / "audio"
+# ── Çıktı klasörleri — ortama göre çözümlenir ────────────────────────────────
+OUTPUT_DIR      = _resolve_output_dir()
+TRANSCRIPTS_DIR = OUTPUT_DIR / "transcripts"
+AUDIO_DIR       = OUTPUT_DIR / "audio"
 
 # ── Desteklenen uzantılar ─────────────────────────────────────────────────────
 SUPPORTED_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4", ".webm"}
