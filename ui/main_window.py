@@ -42,9 +42,12 @@ from PyQt6.QtWidgets import (
 
 from core.file_manager import FileManager
 from ui.file_panel import FilePanel
+from ui.welcome_panel import WelcomePanel
 from ui.transcription_panel import TranscriptionPanel
 from ui.queue_panel import QueuePanel
 from ui.tts_panel import TTSPanel
+from ui.settings_panel import SettingsPanel
+from ui.ttt_panel import TTTPanel
 from ui.styles import MAIN_STYLESHEET, COLORS
 
 
@@ -142,22 +145,27 @@ class MainWindow(QMainWindow):
         return bar
 
     def _build_tabs(self) -> QTabWidget:
-        """Üç sekmeli sağ panel."""
         tabs = QTabWidget()
         tabs.setTabPosition(QTabWidget.TabPosition.North)
         tabs.setDocumentMode(True)
 
-        # ── Sekme 0: Tekli Transkripsiyon ──
+        self.welcome_panel = WelcomePanel()
+        tabs.addTab(self.welcome_panel, "🏠  Başlangıç")
+
         self.transcription_panel = TranscriptionPanel()
         tabs.addTab(self.transcription_panel, "📝  Transkribe Et")
 
-        # ── Sekme 1: Toplu İşlem ──
         self.queue_panel = QueuePanel()
         tabs.addTab(self.queue_panel, "📋  Toplu İşlem")
 
-        # ── Sekme 2: TTS ──
         self.tts_panel = TTSPanel()
         tabs.addTab(self.tts_panel, "🎙  Ses Üret")
+
+        self.ttt_panel = TTTPanel()
+        tabs.addTab(self.ttt_panel, "✏️  Metin İşle")
+
+        self.settings_panel = SettingsPanel()
+        tabs.addTab(self.settings_panel, "⚙️  Ayarlar")
 
         return tabs
 
@@ -200,6 +208,7 @@ class MainWindow(QMainWindow):
         self.queue_panel.queue_finished.connect(
             lambda: self._status_bar.showMessage("🏁 Toplu işlem tamamlandı.")
         )
+        self.welcome_panel.mode_selected.connect(self._on_mode_selected)
 
     # ── Slot: Pipeline ────────────────────────────────────────────────
 
@@ -229,7 +238,29 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage(
             f"📋 {count} dosya kuyruğa eklendi  —  'Kuyruğu Başlat'a basın."
         )
+    @pyqtSlot(str)
+    def _on_mode_selected(self, mode_id: str) -> None:
+        # STS flag'ini her seçimde sıfırla
+        self.transcription_panel.set_sts_mode(mode_id == "sts")
 
+        mapping = {
+            "stt": self.transcription_panel,
+            "tts": self.tts_panel,
+            "ttt": self.ttt_panel,
+            "sts": self.transcription_panel,
+        }
+        panel = mapping.get(mode_id)
+        if panel:
+            self.tab_widget.setCurrentIndex(
+                self.tab_widget.indexOf(panel)
+            )
+        labels = {
+            "stt": "Ses → Metin modu",
+            "tts": "Metin → Ses modu",
+            "ttt": "Metin → Metin modu (yakında)",
+            "sts": "Ses → Ses modu — transkripsiyon sonrası otomatik TTS",
+        }
+        self._status_bar.showMessage(f"✅ {labels.get(mode_id, '')}")
     # ── Stil ─────────────────────────────────────────────────────────
 
     def _apply_styles(self) -> None:

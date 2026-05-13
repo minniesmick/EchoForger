@@ -1,38 +1,44 @@
-﻿# ════════════════════════════════════════════════
-#  EchoForge — Python Bağımlılıkları
-#  Python 3.10 veya üzeri önerilir.
+# ══════════════════════════════════════════════════════════
+# EchoForge — Requirements
+# ══════════════════════════════════════════════════════════
 #
-#  Kurulum:
-#      pip install -r requirements.txt
+# KURULUM SIRASI ÖNEMLİ — adım adım uygula:
 #
-#  GPU (CUDA) desteği için PyTorch'u ayrıca kur:
-#      pip install torch --index-url https://download.pytorch.org/whl/cu121
+# Adım 1 — PyTorch (CUDA 11.8, .venv için):
+#   pip install torch==2.0.1+cu118 torchaudio==2.0.2+cu118 \
+#     --index-url https://download.pytorch.org/whl/cu118
 #
-#  Fish Speech ayrı bir sanal ortamda (.venv_fish) çalışır;
-#  bu dosya yalnızca ana ortam (.venv) içindir.
-# ════════════════════════════════════════════════
+# Adım 2 — Kalan paketler:
+#   pip install -r requirements.txt
+#
+# NOT: Fish Speech kaldırıldı. .venv_fish artık kullanılmıyor.
+# ══════════════════════════════════════════════════════════
 
-# ── GUI ──────────────────────────────────────────
-PyQt6>=6.6.0
+# ── UI ────────────────────────────────────────────────────
+PyQt6>=6.5.0
 
-# ── Speech-to-Text (STT) ─────────────────────────
-faster-whisper>=1.0.0       # CTranslate2 tabanlı Whisper backend
-# ctranslate2 faster-whisper ile otomatik gelir; GPU için CUDA 12.x gerekli
+# ── STT — Transkripsiyon ──────────────────────────────────
+faster-whisper>=1.0.0
 
-# ── Text-to-Speech (TTS) — XTTSv2 ───────────────
-TTS>=0.22.0                  # Coqui TTS (XTTSv2 dahil)
-torch>=2.0.0,<2.1.0          # Coqui TTS torch 2.0.x gerektirir
-torchaudio>=2.0.0,<2.1.0
+# ── TTS — Ses Üretimi ─────────────────────────────────────
+# Coqui TTS (XTTSv2)
+TTS>=0.22.0
 
-# ── Ses işleme ────────────────────────────────────
-soundfile>=0.12.1            # Waveform okuma (libsndfile backend)
+# cuDNN uyumsuzluk sorunu yaşarsan:
+# pip install nvidia-cudnn-cu11==8.6.0.163
+nvidia-cudnn-cu11==8.6.0.163
+
+# ── Ses işleme ────────────────────────────────────────────
+pydub>=0.25.1
+soundfile>=0.12.1
+
+# ── Görselleştirme ────────────────────────────────────────
+pyqtgraph>=0.13.3
 numpy>=1.24.0
-pydub>=0.25.1                # Ses parçalarını birleştirme
-# pydub için sistem bağımlılığı: ffmpeg (PATH'te olmalı)
-# → https://ffmpeg.org/download.html
 
-# ── Görselleştirme ────────────────────────────────
-pyqtgraph>=0.13.3            # Waveform widget (Qt-native, hızlı)
+# ── Hume AI TADA (opsiyonel, bulut TTS) ──────────────────
+# Kullanmayacaksan bu satırı yorum yap:
+# hume-tada
 
-# ── Yardımcı ─────────────────────────────────────
-requests>=2.31.0             # Model indirme kontrolleri (opsiyonel)
+# ── Ollama (TTT modu için — ileride) ─────────────────────
+# pip install ollama   (hazır olunca eklenecek)

@@ -7,7 +7,6 @@ EchoForge'un QTabWidget içindeki "🎙 Ses Üret" sekmesini oluşturur.
 
 Desteklenen motorlar:
     • XTTSv2      (Coqui — lokal CUDA, 57 ses, klonlama)
-    • Fish Speech (lokal CUDA — subprocess, yalnızca klonlama)
     • Hume TADA   (bulut API, 7 ses, klonlama yok)
 
 Dışarıdan metin almak (pipeline):
@@ -55,7 +54,6 @@ from tts.tts_engine import (
     SUPPORTED_LANGUAGES,
     MODEL_DISPLAY_NAMES,
     MODEL_XTTS,
-    MODEL_FISH,
     MODEL_HUME_TADA,
 )
 from tts.workers import (
@@ -67,8 +65,8 @@ from tts.workers import (
 from ui.styles import COLORS
 
 # Metnin bu karakter sayısını geçmesi durumunda ChunkedTTSWorker kullanılır
-CHUNK_THRESHOLD = 250
-
+from core.settings_manager import SettingsManager
+CHUNK_THRESHOLD = SettingsManager.instance().get("chunk_threshold")
 
 class TTSPanel(QWidget):
     """

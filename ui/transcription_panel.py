@@ -55,6 +55,8 @@ class TranscriptionPanel(QWidget):
         self._worker: TranscriptionWorker | None = None
         self._full_text: str                     = ""
         self._segments: SegmentList              = []   # [(start, end, text), ...]
+        self._sts_mode: bool                     = False
+
         self._setup_ui()
 
     # ── Arayüz kurulumu ──────────────────────────────────────────────
@@ -252,10 +254,20 @@ class TranscriptionPanel(QWidget):
         self._set_busy(False)
         self.copy_btn.setEnabled(True)
         self.save_btn.setEnabled(True)
-        self.pipeline_btn.setEnabled(True)   # ← Pipeline butonu aktif
+        self.pipeline_btn.setEnabled(True)
         self.status_lbl.setText(
             f"✅ Hazır  |  {len(self._segments)} segment"
         )
+        if self._sts_mode and text:
+            self.status_lbl.setText(
+                f"✅ Hazır  |  {len(self._segments)} segment  "
+                f"— STS: TTS'e otomatik gönderildi."
+            )
+            self.text_sent_to_tts.emit(text)
+            
+    def set_sts_mode(self, enabled: bool) -> None:
+        """STS modunda transkripsiyon bitince otomatik TTS'e gönderir."""
+        self._sts_mode = enabled
 
     @pyqtSlot(str)
     def _on_error(self, message: str) -> None:

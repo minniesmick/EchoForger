@@ -1,7 +1,7 @@
 # tts/workers.py
 """
 EchoForge — QThread tabanlı TTS Worker sınıfları.
-Tüm BaseTTSEngine alt sınıflarıyla (XTTSEngine, FishSpeechEngine, HumeTADAEngine)
+Tüm BaseTTSEngine alt sınıflarıyla (XTTSEngine, HumeTADAEngine)
 uyumlu şekilde çalışır.
 
 Sınıflar:

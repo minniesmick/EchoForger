@@ -11,12 +11,60 @@ Yenilik:
 """
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from core.settings_manager import SettingsManager
+_hf = SettingsManager.instance().get("hf_cache_dir")
+os.environ.setdefault("HF_HOME",      _hf)
+os.environ.setdefault("HF_HUB_CACHE", str(Path(_hf) / "hub"))
+
+def _fix_cuda_paths():
+    """
+    Windows'ta ctranslate2'nin (faster-whisper) CUDA 12 DLL'lerini 
+    (cublas64_12.dll vb.) bulabilmesi için PATH ayarı yapar.
+    """
+    if sys.platform != "win32":
+        return
+
+    # Sanal ortam ve sistem site-packages yollarını kontrol et
+    import site
+    paths_to_check = [Path(sys.prefix) / "Lib" / "site-packages"]
+    try:
+        for p in site.getsitepackages():
+            paths_to_check.append(Path(p))
+    except (AttributeError, Exception):
+        pass
+
+    nvidia_bin_dirs = [
+        "nvidia/cublas/bin",
+        "nvidia/cudnn/bin",
+        "nvidia/cuda_nvrtc/bin",
+        "nvidia/cuda_runtime/bin",
+        "nvidia/cudnn/lib",
+    ]
+
+    for base in paths_to_check:
+        for nbin in nvidia_bin_dirs:
+            p = base / nbin
+            if p.exists():
+                path_str = str(p.absolute())
+                if path_str not in os.environ["PATH"]:
+                    os.environ["PATH"] = path_str + os.pathsep + os.environ["PATH"]
+                
+                # Python 3.8+ için DLL directory olarak da ekle (daha güvenli)
+                if hasattr(os, "add_dll_directory"):
+                    try:
+                        os.add_dll_directory(path_str)
+                    except Exception:
+                        pass
+
 
 def _detect_device() -> tuple[str, str]:
+    """Donanımı algılar ve uygun compute_type döner."""
     try:
         import torch  # noqa: PLC0415
         if torch.cuda.is_available():
@@ -52,8 +100,11 @@ class TranscriptionWorker(QThread):
 
     def run(self) -> None:
         try:
+            # DLL yollarını düzelt (Windows/CUDA 12 özelinde)
+            _fix_cuda_paths()
+            
             from faster_whisper import WhisperModel  # noqa: PLC0415
-
+            
             device, compute_type = _detect_device()
             device_label = "CUDA (GPU)" if device == "cuda" else "CPU"
 
@@ -61,11 +112,23 @@ class TranscriptionWorker(QThread):
                 f"🔄 Model yükleniyor → {self.model_size}  |  {device_label}"
             )
 
-            model = WhisperModel(
-                self.model_size,
-                device=device,
-                compute_type=compute_type,
-            )
+            try:
+                model = WhisperModel(
+                    self.model_size,
+                    device=device,
+                    compute_type=compute_type,
+                )
+            except Exception as e:
+                # CUDA hatası alınırsa (örn. DLL eksikliği), CPU'ya düş
+                if device == "cuda":
+                    self.progress.emit(f"⚠️ CUDA hatası: {e}. CPU'ya geçiliyor...")
+                    model = WhisperModel(
+                        self.model_size,
+                        device="cpu",
+                        compute_type="int8",
+                    )
+                else:
+                    raise e
 
             if self._is_cancelled:
                 return

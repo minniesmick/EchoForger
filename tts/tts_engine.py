@@ -5,11 +5,10 @@ TTS motor fabrikası ve tüm motor implementasyonları.
 
 Motorlar:
     XTTSEngine       — Coqui XTTSv2 (lokal, CUDA)
-    FishSpeechEngine — Fish Speech V1.5 (lokal, CUDA)
     HumeTADAEngine   — Hume AI TADA (bulut API)
 
 Kullanım:
-    engine = TTSEngineFactory.create("xtts")   # veya "fish_speech" / "hume_tada"
+    engine = TTSEngineFactory.create("xtts")   # veya "hume_tada"
     engine.load_model(progress_callback=print)
     engine.generate(text, output_path, language="tr", speaker_name="Craig Gutsy")
 
@@ -20,11 +19,54 @@ VRAM Yönetimi:
 
 import gc
 import os
-import subprocess
+import sys
+from pathlib import Path
 
-_MODEL_BASE = r"D:\Ses_Modelleri"   # ← ileride settings_manager'a taşınacak
+from core.settings_manager import SettingsManager
+_MODEL_BASE = SettingsManager.instance().get("tts_model_dir")
 os.environ.setdefault("COQUI_MODEL_PATH", _MODEL_BASE)
 os.environ.setdefault("TTS_HOME",         _MODEL_BASE)
+
+
+def _fix_cuda_paths():
+    """
+    Windows'ta cuDNN ve CUDA DLL çakışmalarını (örn. cudnnGetLibConfig hatası) 
+    önlemek için sanal ortamdaki doğru NVIDIA yollarını PATH'in başına ekler.
+    """
+    if sys.platform != "win32":
+        return
+
+    import site
+    paths_to_check = [Path(sys.prefix) / "Lib" / "site-packages"]
+    try:
+        for p in site.getsitepackages():
+            paths_to_check.append(Path(p))
+    except (AttributeError, Exception):
+        pass
+
+    # Öncelikli NVIDIA DLL dizinleri
+    nvidia_bin_dirs = [
+        "nvidia/cudnn/bin",
+        "nvidia/cublas/bin",
+        "nvidia/cuda_nvrtc/bin",
+        "nvidia/cuda_runtime/bin",
+        "nvidia/cudnn/lib",
+    ]
+
+    for base in paths_to_check:
+        for nbin in nvidia_bin_dirs:
+            p = base / nbin
+            if p.exists():
+                path_str = str(p.absolute())
+                if path_str not in os.environ["PATH"]:
+                    # PATH'in en başına ekle ki sistemdeki eski DLL'lerden önce bulunsun
+                    os.environ["PATH"] = path_str + os.pathsep + os.environ["PATH"]
+                
+                if hasattr(os, "add_dll_directory"):
+                    try:
+                        os.add_dll_directory(path_str)
+                    except Exception:
+                        pass
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -32,7 +74,7 @@ from typing import Callable
 
 
 # ── Dil Tablosu ───────────────────────────────────────────────────────────────
-# XTTSv2 ve Fish Speech'in ortak dil kümesi.
+# XTTSv2'nin dil kümesi.
 # Hume TADA yalnızca İngilizce + sınırlı dil destekler; generate() bunu yönetir.
 SUPPORTED_LANGUAGES: dict[str, str] = {
     "Türkçe":                    "tr",
@@ -74,12 +116,10 @@ DEFAULT_SPEAKERS: list[str] = [
 
 # Model kimlik sabitleri — UI ve Factory'de kullanılır
 MODEL_XTTS:      str = "xtts"
-MODEL_FISH:      str = "fish_speech"
 MODEL_HUME_TADA: str = "hume_tada"
 
 MODEL_DISPLAY_NAMES: dict[str, str] = {
     MODEL_XTTS:      "XTTSv2  (Coqui — Lokal)",
-    MODEL_FISH:      "Fish Speech V1.5  (Lokal)",
     MODEL_HUME_TADA: "Hume AI TADA  (Bulut API)",
 }
 
@@ -216,8 +256,15 @@ class XTTSEngine(BaseTTSEngine):
         return DEFAULT_SPEAKERS
 
     # ── Model Yükleme ─────────────────────────────────────────────────────────
+    # cuDNN sembol uyarısını bastır — XTTS için kritik değil
+    import warnings
+    warnings.filterwarnings("ignore", message=".*cudnn.*")
+    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 
     def load_model(self, progress_callback=None) -> None:
+        # DLL yollarını düzelt (cuDNN çakışmalarını önlemek için)
+        _fix_cuda_paths()
+        
         import torch
         os.environ["COQUI_MODEL_PATH"] = r"D:\Ses_Modelleri"
 
@@ -294,145 +341,7 @@ class XTTSEngine(BaseTTSEngine):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Motor 2 — Fish Speech V1.5
-# ══════════════════════════════════════════════════════════════════════════════
-
-class FishSpeechEngine(BaseTTSEngine):
-    """
-    Fish Speech V1.5 — lokal CUDA çıkarımı (Subprocess Modu).
-
-    Kurulum:
-        D:\AI_Ortak_Venv\Venv_Forge_Fish_v2 içindeki izole venv'i kullanır.
-        Bu sayede Torch versiyon çakışmaları engellenir ve VRAM her üretim
-        sonrası otomatik temizlenir.
-
-    Model dosyaları:
-        D:\Ses_Modelleri\fish-speech-1.5\
-    """
-
-    MODEL_DIR = Path(r"D:\Ses_Modelleri\fish-speech-1.5")
-    
-    _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    FISH_PYTHON   = str(_PROJECT_ROOT / ".venv_fish" / "Scripts" / "python.exe")
-
-    def __init__(self) -> None:
-        super().__init__()
-        # Subprocess modunda yerel model nesnesi tutulmaz
-        self._model = None
-
-    # ── Kapasite ─────────────────────────────────────────────────────────────
-
-    @property
-    def supports_default_speakers(self) -> bool:
-        return False   # Fish Speech dahili isimli konuşmacı sunmaz
-
-    @property
-    def supports_voice_cloning(self) -> bool:
-        return True
-
-    # ── Model Yükleme (Doğrulama) ─────────────────────────────────────────────
-
-    def load_model(self, progress_callback=None) -> None:
-        """
-        Modeli ana sürece yüklemek yerine, uydu venv ve Python yolunu doğrular.
-       
-        """
-        if progress_callback:
-            progress_callback("Fish Speech (Satellite) — Bağlantı kontrol ediliyor...")
-
-        # Python yolunun varlığını kontrol et
-        if not os.path.exists(self.FISH_PYTHON):
-            raise RuntimeError(
-                f"Fish Speech venv bulunamadı!\nBeklenen: {self.FISH_PYTHON}\n"
-                "Lütfen junction bağlantısını ve venv kurulumunu kontrol edin."
-            )
-
-        if progress_callback:
-            import torch
-            gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "GPU Bilinmiyor"
-            progress_callback(f"Fish Speech Köprüsü Hazır — GPU: {gpu_name}")
-            progress_callback("Üretim sırasında izole süreç (subprocess) kullanılacak. ✓")
-
-        self.is_loaded = True
-
-    # ── Model Kaldırma ────────────────────────────────────────────────────────
-
-    def unload_model(self, progress_callback=None) -> None:
-        """
-        Subprocess her üretimden sonra kapandığı için VRAM zaten boşalır.
-        Sadece durumu sıfırlıyoruz.
-        """
-        if progress_callback:
-            progress_callback("Fish Speech durumu sıfırlandı.")
-        self._model = None
-        super().unload_model(progress_callback)
-
-    # ── Ses Üretimi (Subprocess) ──────────────────────────────────────────────
-
-    def generate(
-        self,
-        text: str,
-        output_path: str | Path,
-        language: str = "tr",
-        speaker_name: str | None = None,
-        speaker_wav: str | Path | None = None,
-        progress_callback=None,
-    ) -> Path:
-        """
-        Metni sese çevirmek için .venv_fish içindeki Python'ı çağırır.
-       
-        """
-        if not self.is_loaded:
-            raise RuntimeError("Model 'yüklenmedi'. Önce butona basın.")
-            
-        if not speaker_wav:
-            raise ValueError(
-                "Fish Speech ses klonlama gerektirir.\n"
-                "Lütfen reference_voices/ klasöründen bir .wav dosyası seçin."
-            )
-
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if progress_callback:
-            progress_callback("Fish venv başlatılıyor (İzole üretim)...")
-
-        # CLI Komutu: Fish Speech inference modülünü dışarıdan çalıştır
-        # Not: Fish Speech 2.0 CLI parametre yapısına uygun düzenlenmiştir.
-        command = [
-            self.FISH_PYTHON, 
-            "-m", "fish_speech.inference",
-            "--text", text,
-            "--reference_audio", str(speaker_wav),
-            "--output", str(output_path),
-            "--checkpoint_path", str(self.MODEL_DIR)
-        ]
-
-        try:
-            # Süreci başlat ve bitmesini bekle
-            process = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                encoding='utf-8',
-                check=True
-            )
-            
-            if progress_callback:
-                progress_callback("Fish venv üretimi tamamladı ve VRAM'i serbest bıraktı. ✓")
-                
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr if e.stderr else "Bilinmeyen subprocess hatası."
-            raise RuntimeError(f"Fish Speech Subprocess Hatası:\n{error_msg}")
-
-        if progress_callback:
-            progress_callback(f"Kaydedildi: {output_path.name} ✓")
-
-        return output_path
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  Motor 3 — Hume AI TADA
+#  Motor 2 — Hume AI TADA
 # ══════════════════════════════════════════════════════════════════════════════
 
 class HumeTADAEngine(BaseTTSEngine):
@@ -585,16 +494,14 @@ class TTSEngineFactory:
 
     Kullanım:
         engine = TTSEngineFactory.create(MODEL_XTTS)
-        engine = TTSEngineFactory.create(MODEL_FISH)
         engine = TTSEngineFactory.create(MODEL_HUME_TADA)
 
         available = TTSEngineFactory.available_models()
-        # → {"xtts": "XTTSv2 (Coqui — Lokal)", "fish_speech": ..., "hume_tada": ...}
+        # → {"xtts": "XTTSv2 (Coqui — Lokal)", "hume_tada": ...}
     """
 
     _registry: dict[str, type[BaseTTSEngine]] = {
         MODEL_XTTS:      XTTSEngine,
-        MODEL_FISH:      FishSpeechEngine,
         MODEL_HUME_TADA: HumeTADAEngine,
     }
 
@@ -604,7 +511,7 @@ class TTSEngineFactory:
         Belirtilen model kimliği için yeni, yüklenmemiş bir motor örneği döndürür.
 
         Args:
-            model_id: MODEL_XTTS | MODEL_FISH | MODEL_HUME_TADA
+            model_id: MODEL_XTTS | MODEL_HUME_TADA
 
         Returns:
             is_loaded=False durumunda bir BaseTTSEngine örneği.

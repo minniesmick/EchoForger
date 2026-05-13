@@ -1,33 +1,58 @@
-.venv/
-.vscode/
-.venv_fish/
+# ══════════════════════════════════════════════════════════
+# EchoForge — .gitignore
+# ══════════════════════════════════════════════════════════
+
+# ── Python ────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
 
+# ── Sanal Ortamlar ────────────────────────────────────────
+.venv/
+.venv_fish/
+venv/
+env/
 
-output/*
-!output/.gitkeep
+# ── Uygulama Verileri (büyük / kişisel) ──────────────────
+voice_files/
+reference_voices/
+output/
+settings.json
 
-output/transcripts/*
-!output/transcripts/.gitkeep
+# ── Model Dosyaları ───────────────────────────────────────
+# Modeller D:\Ses_Modelleri veya ~/ses_modelleri altında,
+# repoya eklenmemeli
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
 
-output/audio/*
-!output/audio/.gitkeep
+# ── HuggingFace / Ollama Cache ────────────────────────────
+.cache/
+hf_cache/
 
-reference_voices/*
-!reference_voices/.gitkeep
+# ── IDE / Editör ──────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+*.swp
+*.swo
+*~
 
-voice_files/*
-!voice_files/.gitkeep
-
-.env
-.env.*
-*.log
-secrets.*
-credentials.*
-
-# --- OS ---
+# ── OS ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
-/.venv_fish
+
+# ── Log / Geçici ──────────────────────────────────────────
+*.log
+_chunks_tmp/
+*.tmp
