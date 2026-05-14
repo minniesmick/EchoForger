@@ -56,6 +56,8 @@ class TTTPanel(QWidget):
         panel.receive_text(text: str)
     """
 
+    text_sent_to_tts = pyqtSignal(str)   # Pipeline köprüsü → TTSPanel
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
 
@@ -173,6 +175,23 @@ class TTTPanel(QWidget):
 
     # ── Metin alanları ────────────────────────────────────────────────
 
+    def _send_to_tts(self) -> None:
+        text = self.output_edit.toPlainText().strip()
+        if text:
+            self.text_sent_to_tts.emit(text)
+            self._log("📤 Metin TTS paneline gönderildi.")
+
+    @pyqtSlot(str)
+    def _on_generation_done(self, _: str) -> None:
+        self._set_generating(False)
+        self._log("✅ Tamamlandı.")
+        self.btn_to_tts.setEnabled(True)   # ← üretim bitince aktif
+
+    def _send_to_tts(self) -> None:
+        text = self.output_edit.toPlainText().strip()
+        if text:
+            self.text_sent_to_tts.emit(text)
+
     def _build_text_area(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(1)
@@ -214,6 +233,13 @@ class TTTPanel(QWidget):
         btn_to_input.setToolTip("Çıktıyı giriş alanına kopyalar (zincirleme işlem)")
         btn_to_input.clicked.connect(self._output_to_input)
         btn_row.addWidget(btn_to_input)
+
+        self.btn_to_tts = QPushButton("→ TTS'e Gönder")
+        self.btn_to_tts.setObjectName("pipeline_btn")
+        self.btn_to_tts.setToolTip("Çıktıyı Ses Üret sekmesine gönder")
+        self.btn_to_tts.setEnabled(False)
+        self.btn_to_tts.clicked.connect(self._send_to_tts)
+        btn_row.addWidget(self.btn_to_tts)
 
         rl.addLayout(btn_row)
         splitter.addWidget(right)

@@ -22,6 +22,11 @@ import os
 import sys
 from pathlib import Path
 
+from tts.kokoro_engine import (
+    KokoroEngine, MODEL_KOKORO,
+    KOKORO_LANGUAGES, KOKORO_VOICES,
+)
+
 from core.settings_manager import SettingsManager
 _MODEL_BASE = SettingsManager.instance().get("tts_model_dir")
 os.environ.setdefault("COQUI_MODEL_PATH", _MODEL_BASE)
@@ -120,6 +125,7 @@ MODEL_HUME_TADA: str = "hume_tada"
 
 MODEL_DISPLAY_NAMES: dict[str, str] = {
     MODEL_XTTS:      "XTTSv2  (Coqui — Lokal)",
+    MODEL_KOKORO:    "Kokoro  (ONNX — Hızlı)",
     MODEL_HUME_TADA: "Hume AI TADA  (Bulut API)",
 }
 
@@ -502,6 +508,7 @@ class TTSEngineFactory:
 
     _registry: dict[str, type[BaseTTSEngine]] = {
         MODEL_XTTS:      XTTSEngine,
+        MODEL_KOKORO:    KokoroEngine,
         MODEL_HUME_TADA: HumeTADAEngine,
     }
 

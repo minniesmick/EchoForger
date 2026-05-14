@@ -20,6 +20,7 @@ from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
 from PyQt6.QtCore import Qt, pyqtSlot, pyqtSignal
 
 from core.transcriber import TranscriptionWorker
+from core.mic_worker import MicWorker
 from core.file_manager import FileManager, SegmentList
 from ui.waveform_widget import WaveformWidget
 
@@ -52,7 +53,8 @@ class TranscriptionPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._current_file: Path | None          = None
-        self._worker: TranscriptionWorker | None = None
+        self._worker:     TranscriptionWorker | None = None
+        self._mic_worker: MicWorker           | None = None
         self._full_text: str                     = ""
         self._segments: SegmentList              = []   # [(start, end, text), ...]
         self._sts_mode: bool                     = False
@@ -98,6 +100,28 @@ class TranscriptionPanel(QWidget):
         self.file_lbl.setObjectName("status_label")
         self.file_lbl.setWordWrap(True)
         layout.addWidget(self.file_lbl)
+
+        # ── Mikrofon butonu + VU meter ──
+        mic_row = QHBoxLayout()
+        mic_row.setSpacing(8)
+
+        self.mic_btn = QPushButton("🎤  Mikrofon")
+        self.mic_btn.setCheckable(True)
+        self.mic_btn.setObjectName("primary_btn")
+        self.mic_btn.clicked.connect(self._toggle_mic)
+        mic_row.addWidget(self.mic_btn)
+
+        self.vu_bar = QProgressBar()
+        self.vu_bar.setRange(0, 100)
+        self.vu_bar.setValue(0)
+        self.vu_bar.setFixedHeight(6)
+        self.vu_bar.setTextVisible(False)
+        self.vu_bar.setStyleSheet(
+            "QProgressBar::chunk { background-color: #6EE7B7; border-radius: 3px; }"
+        )
+        mic_row.addWidget(self.vu_bar, stretch=1)
+
+        layout.addLayout(mic_row)
 
         # ── Waveform ──
         self.waveform = WaveformWidget()
@@ -168,7 +192,17 @@ class TranscriptionPanel(QWidget):
 
         layout.addLayout(btn_layout)
 
-        # ── Pipeline butonu — tam genişlik, ayrı satır ──
+        # ── Diarization butonu ──
+        self.diarize_btn = QPushButton("👥  Konuşmacıları Ayır")
+        self.diarize_btn.setEnabled(False)
+        self.diarize_btn.setToolTip(
+            "Ses dosyasında konuşmacıları tespit eder ve transkribe eder.\n"
+            "HuggingFace token gereklidir (Ayarlar sekmesi)."
+        )
+        self.diarize_btn.clicked.connect(self._start_diarization)
+        layout.addWidget(self.diarize_btn)
+
+        # ── Pipeline butonu ──
         self.pipeline_btn = QPushButton("→  TTS'e Gönder")
         self.pipeline_btn.setObjectName("pipeline_btn")
         self.pipeline_btn.setEnabled(False)
@@ -180,6 +214,46 @@ class TranscriptionPanel(QWidget):
         layout.addWidget(self.pipeline_btn)
 
     # ── Dosya seçimi ─────────────────────────────────────────────────
+    def _toggle_mic(self) -> None:
+        if self.mic_btn.isChecked():
+            self._start_mic()
+        else:
+            self._stop_mic()
+
+    def _start_mic(self) -> None:
+        self.mic_btn.setText("⏹  Durdur")
+        self.output_edit.clear()
+        self._full_text = ""
+        self._segments  = []
+
+        self._mic_worker = MicWorker(
+            model_size = self.model_combo.currentText(),
+            denoise    = self.denoise_chk.isChecked(),
+        )
+        self._mic_worker.progress.connect(self._on_progress)
+        self._mic_worker.recording_started.connect(
+            lambda: self._set_busy(True)
+        )
+        self._mic_worker.segment.connect(self._on_segment)
+        self._mic_worker.finished.connect(self._on_mic_finished)
+        self._mic_worker.error.connect(self._on_error)
+        self._mic_worker.level.connect(
+            lambda v: self.vu_bar.setValue(int(v * 100))
+        )
+        self._mic_worker.start()
+
+    def _stop_mic(self) -> None:
+        if self._mic_worker and self._mic_worker.isRunning():
+            self._mic_worker.stop()
+        self.mic_btn.setText("🎤  Mikrofon")
+        self.mic_btn.setChecked(False)
+        self.vu_bar.setValue(0)
+
+    @pyqtSlot(str)
+    def _on_mic_finished(self, text: str) -> None:
+        self._on_finished(text)   # mevcut _on_finished'i yeniden kullan
+        self._stop_mic()
+
 
     @pyqtSlot(Path)
     def on_file_selected(self, path: Path) -> None:
@@ -193,8 +267,77 @@ class TranscriptionPanel(QWidget):
         self.copy_btn.setEnabled(False)
         self.save_btn.setEnabled(False)
         self.pipeline_btn.setEnabled(False)
+        self.diarize_btn.setEnabled(True)
         self.waveform.load(path)
 
+    def _start_diarization(self) -> None:
+        if not self._current_file:
+            return
+        from core.diarization_worker import DiarizationWorker
+
+        self.output_edit.clear()
+        self._full_text = ""
+        self._segments  = []
+
+        self._diarize_worker = DiarizationWorker(
+            audio_path = self._current_file,
+            model_size = self.model_combo.currentText(),
+            transcribe = True,
+            denoise    = self.denoise_chk.isChecked(),
+        )
+        self._diarize_worker.progress.connect(self._on_progress)
+        self._diarize_worker.speaker_segment.connect(self._on_speaker_segment)
+        self._diarize_worker.finished.connect(self._on_diarization_done)
+        self._diarize_worker.error.connect(self._on_error)
+        self._set_busy(True)
+        self._diarize_worker.start()
+
+    @pyqtSlot(str, float, float, str)
+    def _on_speaker_segment(
+        self, speaker: str, start: float, end: float, text: str
+    ) -> None:
+        cursor = self.output_edit.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+
+        # Konuşmacı etiketi
+        from PyQt6.QtGui import QTextCharFormat, QColor
+        spk_fmt = QTextCharFormat()
+        spk_fmt.setForeground(QColor(self._speaker_color(speaker)))
+        spk_fmt.setFontWeight(700)
+        cursor.insertText(
+            f"[{speaker}  {_fmt_time(start)} → {_fmt_time(end)}]  ",
+            spk_fmt,
+        )
+
+        # Metin
+        txt_fmt = QTextCharFormat()
+        txt_fmt.setForeground(QColor(self.COLOR_TEXT))
+        cursor.insertText((text or "—") + "\n", txt_fmt)
+
+        self.output_edit.setTextCursor(cursor)
+        self.output_edit.ensureCursorVisible()
+
+    @pyqtSlot(str)
+    def _on_diarization_done(self, text: str) -> None:
+        self._full_text = text
+        self._set_busy(False)
+        self.copy_btn.setEnabled(True)
+        self.save_btn.setEnabled(True)
+        self.pipeline_btn.setEnabled(True)
+
+    @staticmethod
+    def _speaker_color(speaker: str) -> str:
+        """Her konuşmacıya tutarlı bir renk atar."""
+        palette = [
+            "#6EE7B7",   # teal
+            "#6C63FF",   # indigo
+            "#FCD34D",   # sarı
+            "#F87171",   # kırmızı
+            "#C084FC",   # mor
+            "#34D399",   # yeşil
+        ]
+        idx = hash(speaker) % len(palette)
+        return palette[idx]
     # ── Transkripsiyon ────────────────────────────────────────────────
 
     def _start_transcription(self) -> None:
@@ -377,6 +520,6 @@ class TranscriptionPanel(QWidget):
         self.transcribe_btn.setEnabled(not busy)
         self.cancel_btn.setEnabled(busy)
         self.model_combo.setEnabled(not busy)
-        # Transkripsiyon devam ederken pipeline butonu da devre dışı
+        self.mic_btn.setEnabled(not busy or self.mic_btn.isChecked())
         if busy:
             self.pipeline_btn.setEnabled(False)

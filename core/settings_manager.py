@@ -29,6 +29,7 @@ DEFAULTS: dict = {
     "last_mode":        "stt", # welcome screen son seçim
     "ollama_url":       "http://localhost:11434",
     "gemini_api_key":   "",
+    "hf_token":         "",
     "ttt_backend":      "ollama",   # "ollama" | "gemini"
 }
 

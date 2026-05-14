@@ -521,6 +521,12 @@ class TTSPanel(QWidget):
         self.btn_generate.setEnabled(True)
         self.btn_load_model.setText("  ✓  Model Yüklendi")
         self.btn_load_model.setEnabled(False)
+
+        # Kokoro seçildiyse dil combo'sunu Kokoro dilleriyle güncelle
+        if self._current_model_id == "kokoro":
+            self._set_kokoro_languages()
+        else:
+            self._restore_default_languages()
         display = MODEL_DISPLAY_NAMES.get(self._current_model_id, self._current_model_id)
         self._log(f"✅ {display} başarıyla yüklendi.", COLORS["success"])
 
@@ -530,6 +536,23 @@ class TTSPanel(QWidget):
         self._log(f"❌ Model Hatası: {error_msg}", COLORS["error"])
         QMessageBox.critical(self, "Model Yükleme Hatası", error_msg)
 
+    def _set_kokoro_languages(self) -> None:
+        from tts.kokoro_engine import KOKORO_LANGUAGES
+        self.lang_combo.blockSignals(True)
+        self.lang_combo.clear()
+        for name in KOKORO_LANGUAGES:
+            self.lang_combo.addItem(name)
+        self.lang_combo.blockSignals(False)
+
+    def _restore_default_languages(self) -> None:
+        self.lang_combo.blockSignals(True)
+        self.lang_combo.clear()
+        for lang_name in SUPPORTED_LANGUAGES:
+            self.lang_combo.addItem(lang_name)
+        tr_index = self.lang_combo.findText("Türkçe")
+        if tr_index >= 0:
+            self.lang_combo.setCurrentIndex(tr_index)
+        self.lang_combo.blockSignals(False)
     # ══════════════════════════════════════════════════════════════════
     #  Slot: Ses üretimi
     # ══════════════════════════════════════════════════════════════════
@@ -545,7 +568,11 @@ class TTSPanel(QWidget):
             return
 
         lang_name = self.lang_combo.currentText()
-        language  = SUPPORTED_LANGUAGES[lang_name]
+        if self._current_model_id == "kokoro":
+            from tts.kokoro_engine import KOKORO_LANGUAGES
+            language = KOKORO_LANGUAGES.get(lang_name, "en-us")
+        else:
+            language = SUPPORTED_LANGUAGES.get(lang_name, "tr")
 
         speaker_name: str | None  = None
         speaker_wav:  Path | None = None

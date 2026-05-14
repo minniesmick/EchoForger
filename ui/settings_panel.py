@@ -51,7 +51,15 @@ class SettingsPanel(QWidget):
         self.hf_cache_edit = self._line_edit_with_browse(
             "hf_cache_dir", "HuggingFace Cache Dizini"
         )
+        self.hf_token_edit = QLineEdit()
+        self.hf_token_edit.setPlaceholderText("hf_...")
+        self.hf_token_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("HuggingFace Token:", self.hf_token_edit)
         form.addRow("Cache Dizini:", self.hf_cache_edit)
+        self.hf_token_edit = QLineEdit()
+        self.hf_token_edit.setPlaceholderText("hf_...")
+        self.hf_token_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("HuggingFace Token:", self.hf_token_edit)
 
         return group
 
@@ -142,6 +150,7 @@ class SettingsPanel(QWidget):
         self.chunk_spin.setValue(int(self._sm.get("chunk_threshold")))
         self.silence_spin.setValue(int(self._sm.get("silence_ms")))
         self.gemini_key_edit.setText(self._sm.get("gemini_api_key", ""))
+        self.hf_token_edit.setText(self._sm.get("hf_token", ""))
 
     def _on_save(self) -> None:
         self._sm.set_many({
@@ -151,6 +160,7 @@ class SettingsPanel(QWidget):
             "chunk_threshold": self.chunk_spin.value(),
             "silence_ms":      self.silence_spin.value(),
             "gemini_api_key": self.gemini_key_edit.text().strip(),
+            "hf_token": self.hf_token_edit.text().strip(),
         })
         QMessageBox.information(self, "Ayarlar", "Ayarlar kaydedildi. ✓")
 

@@ -209,9 +209,19 @@ class MainWindow(QMainWindow):
             lambda: self._status_bar.showMessage("🏁 Toplu işlem tamamlandı.")
         )
         self.welcome_panel.mode_selected.connect(self._on_mode_selected)
+        self.ttt_panel.text_sent_to_tts.connect(self._on_ttt_to_tts)
+
 
     # ── Slot: Pipeline ────────────────────────────────────────────────
-
+    @pyqtSlot(str)
+    def _on_ttt_to_tts(self, text: str) -> None:
+        self.tts_panel.receive_text(text)
+        tts_index = self.tab_widget.indexOf(self.tts_panel)
+        self.tab_widget.setCurrentIndex(tts_index)
+        self._status_bar.showMessage(
+            "📤 İşlenmiş metin 'Ses Üret' sekmesine aktarıldı."
+        )   
+        
     @pyqtSlot(str)
     def _on_pipeline_triggered(self, text: str) -> None:
         """
