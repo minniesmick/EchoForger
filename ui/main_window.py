@@ -49,6 +49,7 @@ from ui.tts_panel import TTSPanel
 from ui.settings_panel import SettingsPanel
 from ui.ttt_panel import TTTPanel
 from ui.styles import MAIN_STYLESHEET, COLORS
+from ui.archive_panel import ArchivePanel
 
 
 class MainWindow(QMainWindow):
@@ -164,6 +165,9 @@ class MainWindow(QMainWindow):
         self.ttt_panel = TTTPanel()
         tabs.addTab(self.ttt_panel, "✏️  Metin İşle")
 
+        self.archive_panel = ArchivePanel()
+        tabs.addTab(self.archive_panel, "🗄️  Arşiv")
+
         self.settings_panel = SettingsPanel()
         tabs.addTab(self.settings_panel, "⚙️  Ayarlar")
 
@@ -185,6 +189,12 @@ class MainWindow(QMainWindow):
         self.file_panel.file_selected.connect(
             self.transcription_panel.on_file_selected
         )
+        self.transcription_panel.transcript_archived.connect(
+            lambda fn, text, lang, dur: self.archive_panel.add_record(
+                filename=fn, text=text, language=lang, duration=dur,
+                filepath=str(self.transcription_panel._current_file or ""),
+            )
+        )
 
         # Çoklu dosya seçimi → toplu işlem kuyruğu
         self.file_panel.files_selected_for_queue.connect(
@@ -199,6 +209,18 @@ class MainWindow(QMainWindow):
         # Pipeline: Transkripsiyon → TTS
         self.transcription_panel.text_sent_to_tts.connect(
             self._on_pipeline_triggered
+        )
+        # Arşiv pipeline
+        self.archive_panel.text_sent_to_tts.connect(
+            self._on_pipeline_triggered
+        )
+        self.archive_panel.text_sent_to_ttt.connect(
+            lambda text: (
+                self.ttt_panel.receive_text(text),
+                self.tab_widget.setCurrentIndex(
+                    self.tab_widget.indexOf(self.ttt_panel)
+                ),
+            )
         )
 
         # Durum çubuğu güncellemeleri

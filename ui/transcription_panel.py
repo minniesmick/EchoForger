@@ -35,7 +35,9 @@ class TranscriptionPanel(QWidget):
     """Transkripsiyon çıktısını ve kontrolleri barındıran sağ panel."""
 
     # ── Sinyaller ────────────────────────────────────────────────────
-    text_sent_to_tts = pyqtSignal(str)   # Pipeline köprüsü → TTSPanel.receive_text
+    text_sent_to_tts    = pyqtSignal(str)
+    transcript_archived = pyqtSignal(str, str, str, float)
+    # (filename, text, language, duration)
 
     MODELS = [
         "tiny",
@@ -404,6 +406,14 @@ class TranscriptionPanel(QWidget):
         self.pipeline_btn.setEnabled(True)
         self.status_lbl.setText(
             f"✅ Hazır  |  {len(self._segments)} segment"
+            # Arşive otomatik kaydet
+            if text and self._current_file:
+                self.transcript_archived.emit(
+                    self._current_file.name,
+                    text,
+                    "",       # language — info.language buraya taşınabilir
+                    0.0,      # duration
+                )
         )
         if self._sts_mode and text:
             self.status_lbl.setText(
