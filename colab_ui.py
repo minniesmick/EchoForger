@@ -67,7 +67,7 @@ def transcribe(audio_path: str, model_size: str) -> tuple[str, str]:
 # ══════════════════════════════════════════════════════════════════════════════
 #  TTS — Metin → Ses
 # ══════════════════════════════════════════════════════════════════════════════
-
+_tts_engine_cache: dict = {}
 def synthesize(
     text: str,
     speaker_name: str,
@@ -80,8 +80,11 @@ def synthesize(
     import datetime
     from tts.tts_engine import TTSEngineFactory, MODEL_XTTS
 
-    engine = TTSEngineFactory.create(MODEL_XTTS)
-    engine.load_model()
+    if MODEL_XTTS not in _tts_engine_cache:
+        engine = TTSEngineFactory.create(MODEL_XTTS)
+        engine.load_model()
+        _tts_engine_cache[MODEL_XTTS] = engine
+    engine = _tts_engine_cache[MODEL_XTTS]
 
     timestamp   = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = FileManager.get_audio_output_path(f"tts_{timestamp}.wav")

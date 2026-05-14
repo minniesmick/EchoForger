@@ -22,11 +22,6 @@ import os
 import sys
 from pathlib import Path
 
-from tts.kokoro_engine import (
-    KokoroEngine, MODEL_KOKORO,
-    KOKORO_LANGUAGES, KOKORO_VOICES,
-)
-
 from core.settings_manager import SettingsManager
 _MODEL_BASE = SettingsManager.instance().get("tts_model_dir")
 os.environ.setdefault("COQUI_MODEL_PATH", _MODEL_BASE)
@@ -122,6 +117,8 @@ DEFAULT_SPEAKERS: list[str] = [
 # Model kimlik sabitleri — UI ve Factory'de kullanılır
 MODEL_XTTS:      str = "xtts"
 MODEL_HUME_TADA: str = "hume_tada"
+
+MODEL_KOKORO: str = "kokoro"
 
 MODEL_DISPLAY_NAMES: dict[str, str] = {
     MODEL_XTTS:      "XTTSv2  (Coqui — Lokal)",
@@ -272,27 +269,36 @@ class XTTSEngine(BaseTTSEngine):
         _fix_cuda_paths()
         
         import torch
-        os.environ["COQUI_MODEL_PATH"] = r"D:\Ses_Modelleri"
+        
+        # Settings'ten model dizinini al
+        from core.settings_manager import SettingsManager
+        model_dir = SettingsManager.instance().get("tts_model_dir", r"D:\Ses_Modelleri")
+        os.environ["COQUI_MODEL_PATH"] = model_dir
+        os.environ["TTS_HOME"]         = model_dir    
+    
 
         if progress_callback:
             progress_callback("XTTSv2 — PyTorch ve CUDA kontrol ediliyor...")
 
         if not torch.cuda.is_available():
-            raise RuntimeError(
-                "CUDA bulunamadı! CUDA destekli PyTorch kurun:\n"
-                "pip install torch --index-url https://download.pytorch.org/whl/cu121"
-            )
+            # CUDA yoksa CPU'ya düş, hata fırlatma
+            if progress_callback:
+                progress_callback("⚠️ CUDA bulunamadı, CPU modunda yükleniyor...")
+            device = "cpu"
+        else:
+            if progress_callback:
+                progress_callback(f"GPU algılandı: {torch.cuda.get_device_name(0)}")
+            device = "cuda"
 
         if progress_callback:
-            progress_callback(f"GPU algılandı: {torch.cuda.get_device_name(0)}")
             progress_callback("XTTSv2 modeli yükleniyor (ilk açılışta indirme olabilir)...")
 
         from TTS.api import TTS  # type: ignore
-        self._tts = TTS(model_name=self.MODEL_NAME, progress_bar=False).to("cuda")
+        self._tts = TTS(model_name=self.MODEL_NAME, progress_bar=False).to(device)
         self.is_loaded = True
 
         if progress_callback:
-            progress_callback("XTTSv2 başarıyla yüklendi! ✓")
+            progress_callback(f"XTTSv2 başarıyla yüklendi! ({device.upper()}) ✓")
 
     # ── Model Kaldırma ────────────────────────────────────────────────────────
 
@@ -508,28 +514,18 @@ class TTSEngineFactory:
 
     _registry: dict[str, type[BaseTTSEngine]] = {
         MODEL_XTTS:      XTTSEngine,
-        MODEL_KOKORO:    KokoroEngine,
         MODEL_HUME_TADA: HumeTADAEngine,
     }
 
     @classmethod
     def create(cls, model_id: str) -> BaseTTSEngine:
-        """
-        Belirtilen model kimliği için yeni, yüklenmemiş bir motor örneği döndürür.
-
-        Args:
-            model_id: MODEL_XTTS | MODEL_HUME_TADA
-
-        Returns:
-            is_loaded=False durumunda bir BaseTTSEngine örneği.
-
-        Raises:
-            ValueError: Bilinmeyen model_id girilirse.
-        """
+        if model_id == MODEL_KOKORO:
+            from tts.kokoro_engine import KokoroEngine
+            return KokoroEngine()
         if model_id not in cls._registry:
             raise ValueError(
                 f"Bilinmeyen model kimliği: '{model_id}'.\n"
-                f"Geçerli seçenekler: {list(cls._registry)}"
+                f"Geçerli seçenekler: {list(cls._registry) + [MODEL_KOKORO]}"
             )
         return cls._registry[model_id]()
 

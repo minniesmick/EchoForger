@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QPushButton, QLabel,
     QComboBox, QProgressBar, QMenu,
+    QCheckBox,
 )
 from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
 from PyQt6.QtCore import Qt, pyqtSlot, pyqtSignal
@@ -85,8 +86,10 @@ class TranscriptionPanel(QWidget):
         self.model_combo = QComboBox()
         self.model_combo.addItems(self.MODELS)
         self.model_combo.setCurrentText("large-v3-turbo")
-        self.model_combo.setCurrentText("large-v3-turbo")
-        self.model_combo.setToolTip(...)
+        self.model_combo.setToolTip(
+            "Whisper model boyutunu seçin.\n"
+            "Daha büyük modeller (large) daha isabetlidir ancak daha fazla GPU belleği gerektirir."
+        )
         header.addWidget(self.model_combo)
 
         self.denoise_chk = QCheckBox("🔇 Gürültü Temizle")
@@ -406,15 +409,21 @@ class TranscriptionPanel(QWidget):
         self.pipeline_btn.setEnabled(True)
         self.status_lbl.setText(
             f"✅ Hazır  |  {len(self._segments)} segment"
-            # Arşive otomatik kaydet
-            if text and self._current_file:
-                self.transcript_archived.emit(
-                    self._current_file.name,
-                    text,
-                    "",       # language — info.language buraya taşınabilir
-                    0.0,      # duration
-                )
         )
+        if self._sts_mode and text:
+            self.status_lbl.setText(
+                f"✅ Hazır  |  {len(self._segments)} segment  "
+                f"— STS: TTS'e otomatik gönderildi."
+            )
+            self.text_sent_to_tts.emit(text)
+        # Arşive otomatik kaydet
+        if text and self._current_file:
+            self.transcript_archived.emit(
+                self._current_file.name,
+                text,
+                "",
+                0.0,
+            )
         if self._sts_mode and text:
             self.status_lbl.setText(
                 f"✅ Hazır  |  {len(self._segments)} segment  "

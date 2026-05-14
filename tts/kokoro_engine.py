@@ -98,11 +98,29 @@ class KokoroEngine(BaseTTSEngine):
         except ImportError as exc:
             raise RuntimeError(
                 "kokoro-onnx kurulu değil.\n"
-                "Kurulum: pip install kokoro-onnx kokoro-onnx[voices]"
+                "Kurulum: pip install kokoro-onnx"
             ) from exc
 
-        # Model ilk çalıştırmada otomatik indirilir
-        self._pipeline = Kokoro()
+        from core.settings_manager import SettingsManager
+        model_dir   = Path(SettingsManager.instance().get("tts_model_dir")) / "kokoro"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        model_path  = model_dir / "kokoro-v1.0.onnx"
+        voices_path = model_dir / "voices-v1.0.bin"
+
+        if not model_path.exists() or not voices_path.exists():
+            if progress_callback:
+                progress_callback("Kokoro model dosyaları indiriliyor (~300MB)...")
+            import urllib.request
+            base = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+            urllib.request.urlretrieve(base + "kokoro-v1.0.onnx", str(model_path))
+            if progress_callback:
+                progress_callback("kokoro-v1.0.onnx indirildi, voices indiriliyor...")
+            urllib.request.urlretrieve(base + "voices-v1.0.bin",  str(voices_path))
+
+        if progress_callback:
+            progress_callback("Kokoro başlatılıyor...")
+
+        self._pipeline = Kokoro(str(model_path), str(voices_path))
         self.is_loaded = True
 
         if progress_callback:

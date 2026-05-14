@@ -5,7 +5,7 @@ Ollama üzerinden LLM ile metin işleme, çeviri ve serbest mod.
 """
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, pyqtSlot, QThread
+from PyQt6.QtCore import Qt, pyqtSlot, pyqtSignal, QThread
 from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
