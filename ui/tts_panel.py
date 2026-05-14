@@ -564,8 +564,16 @@ class TTSPanel(QWidget):
             speaker_wav = wav_data
 
         # Çıktı path'i
-        timestamp   = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = FileManager.get_audio_output_path(f"tts_{timestamp}.wav")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        if self.radio_clone.isChecked() and speaker_wav:
+            voice_tag = f"ref_{speaker_wav.stem}"
+        else:
+            voice_tag = speaker_name.replace(" ", "_") if speaker_name else "unknown"
+
+        output_path = FileManager.get_audio_output_path(
+            f"xtts_{voice_tag}_{timestamp}.wav"
+        )
 
         self._set_busy(True)
         self._log(

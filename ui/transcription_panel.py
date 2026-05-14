@@ -81,12 +81,16 @@ class TranscriptionPanel(QWidget):
         self.model_combo = QComboBox()
         self.model_combo.addItems(self.MODELS)
         self.model_combo.setCurrentText("large-v3-turbo")
-        self.model_combo.setToolTip(
-            "tiny           → En hızlı, düşük doğruluk\n"
-            "large-v3-turbo → Hız/kalite optimum noktası  ✓ Önerilen\n"
-            "large-v3       → En yüksek doğruluk, yavaş"
-        )
+        self.model_combo.setCurrentText("large-v3-turbo")
+        self.model_combo.setToolTip(...)
         header.addWidget(self.model_combo)
+
+        self.denoise_chk = QCheckBox("🔇 Gürültü Temizle")
+        self.denoise_chk.setToolTip(
+            "Transkripsiyon öncesi ses gürültüsünü azaltır.\n"
+            "Mikrofon kayıtları ve gürültülü ortamlar için önerilir."
+        )
+        header.addWidget(self.denoise_chk)
         layout.addLayout(header)
 
         # ── Seçili dosya etiketi ──

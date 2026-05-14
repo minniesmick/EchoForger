@@ -62,7 +62,24 @@ def _fix_cuda_paths():
                     except Exception:
                         pass
 
+def _denoise(audio_path: Path) -> Path:
+    """
+    Ses dosyasını gürültüden arındırır, geçici dosya olarak kaydeder.
+    Orijinal dosyaya dokunmaz.
+    Döner: temizlenmiş geçici dosya Path'i
+    """
+    import tempfile
+    import numpy as np
+    import soundfile as sf
+    import noisereduce as nr
 
+    data, rate = sf.read(str(audio_path), always_2d=True, dtype="float32")
+    mono       = data.mean(axis=1)
+    reduced    = nr.reduce_noise(y=mono, sr=rate, stationary=False)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    sf.write(tmp.name, reduced, rate)
+    return Path(tmp.name)
 def _detect_device() -> tuple[str, str]:
     """Donanımı algılar ve uygun compute_type döner."""
     try:
@@ -90,11 +107,14 @@ class TranscriptionWorker(QThread):
     finished = pyqtSignal(str)
     error    = pyqtSignal(str)
 
-    def __init__(self, audio_path: Path, model_size: str = "large-v3-turbo"):
+    def __init__(self, audio_path: Path, model_size: str = "large-v3-turbo",
+                 denoise: bool = False):
         super().__init__()
-        self.audio_path  = audio_path
-        self.model_size  = model_size
+        self.audio_path    = audio_path
+        self.model_size    = model_size
+        self.denoise       = denoise
         self._is_cancelled = False
+        self._tmp_path: Path | None = None
 
     # ── Ana çalışma döngüsü ─────────────────────────────────────────
 
@@ -133,12 +153,20 @@ class TranscriptionWorker(QThread):
             if self._is_cancelled:
                 return
 
+            # Gürültü temizleme (opsiyonel)
+            transcribe_path = self.audio_path
+            if self.denoise:
+                self.progress.emit("🔇 Gürültü temizleniyor…")
+                self._tmp_path  = _denoise(self.audio_path)
+                transcribe_path = self._tmp_path
+                self.progress.emit("✅ Gürültü temizlendi.")
+
             self.progress.emit(
                 f"🎙️ '{self.audio_path.name}' transkribe ediliyor…"
             )
 
             segments, info = model.transcribe(
-                str(self.audio_path),
+                str(transcribe_path),
                 beam_size=5,
                 language=None,
                 vad_filter=True,
@@ -173,6 +201,10 @@ class TranscriptionWorker(QThread):
             self.error.emit(f"Dosya bulunamadı: {self.audio_path}")
         except Exception as exc:  # noqa: BLE001
             self.error.emit(f"Beklenmeyen hata: {exc}")
+        finally:
+            # Geçici dosyayı temizle
+            if self._tmp_path and self._tmp_path.exists():
+                self._tmp_path.unlink(missing_ok=True)
 
     # ── İptal ───────────────────────────────────────────────────────
 
