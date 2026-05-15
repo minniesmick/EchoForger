@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>/ — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/ — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"/","total_count":248,"children":[{"name":"app.jsx","total_count":6,"children":[{"name":"App()","total_count":1,"children":[]},{"name":"root","total_count":1,"children":[]},{"name":"Sidebar()","total_count":1,"children":[]},{"name":"Toasts()","total_count":1,"children":[]},{"name":"TransportBar()","total_count":1,"children":[]},{"name":"useToasts()","total_count":1,"children":[]}]},{"name":"assistant.jsx","total_count":4,"children":[{"name":"Pill()","total_count":1,"children":[]},{"name":"SazAssistant()","total_count":1,"children":[]},{"name":"Suggestion()","total_count":1,"children":[]},{"name":"SUGGESTIONS_REF","total_count":1,"children":[]}]},{"name":"audio_engine.py","total_count":10,"children":[{"name":"._callback()","total_count":1,"children":[]},{"name":"._find_devices()","total_count":1,"children":[]},{"name":"._save_wav()","total_count":1,"children":[]},{"name":".get_available_devices()","total_count":1,"children":[]},{"name":".start()","total_count":1,"children":[]},{"name":".start_recording()","total_count":1,"children":[]},{"name":".stop()","total_count":1,"children":[]},{"name":".stop_recording()","total_count":1,"children":[]},{"name":"is_recording()","total_count":1,"children":[]},{"name":"is_running()","total_count":1,"children":[]}]},{"name":"dsp_chain.py","total_count":39,"children":[{"name":"(dry, wet) döndürür — her ikisi de float32 numpy dizisi.","total_count":1,"children":[]},{"name":"._update_all()","total_count":1,"children":[]},{"name":"._update_tone()","total_count":1,"children":[]},{"name":".add_plugin()","total_count":1,"children":[]},{"name":".apply_preset()","total_count":1,"children":[]},{"name":".get_plugins()","total_count":1,"children":[]},{"name":".remove_plugin()","total_count":1,"children":[]},{"name":".set_bandpass()","total_count":1,"children":[]},{"name":".set_damping()","total_count":1,"children":[]},{"name":".set_delay_ms()","total_count":1,"children":[]},{"name":".set_depth()","total_count":1,"children":[]},{"name":".set_drive()","total_count":1,"children":[]},{"name":".set_feedback()","total_count":1,"children":[]},{"name":".set_high()","total_count":1,"children":[]},{"name":".set_highshelf()","total_count":1,"children":[]},{"name":".set_level()","total_count":1,"children":[]},{"name":".set_low()","total_count":1,"children":[]},{"name":".set_lowshelf()","total_count":1,"children":[]},{"name":".set_mid()","total_count":1,"children":[]},{"name":".set_mix()","total_count":1,"children":[]},{"name":".set_peaking()","total_count":1,"children":[]},{"name":".set_q()","total_count":1,"children":[]},{"name":".set_rate()","total_count":1,"children":[]},{"name":".set_room_size()","total_count":1,"children":[]},{"name":".set_tone()","total_count":1,"children":[]},{"name":"3 bant: düşük raf + orta tepe + yüksek raf.","total_count":1,"children":[]},{"name":"BiquadFilter","total_count":1,"children":[]},{"name":"DelayEffect","total_count":1,"children":[]},{"name":"DistortionEffect","total_count":1,"children":[]},{"name":"dsp_chain.py — Numba JIT ile optimize edilmiş DSP zinciri ======================","total_count":1,"children":[]},{"name":"EchoEffect","total_count":1,"children":[]},{"name":"LFO-modülasyonlu bant-geçiren wah. Biquad state doğrudan float.","total_count":1,"children":[]},{"name":"Master işlem zinciri. Thread-safe.","total_count":1,"children":[]},{"name":"NoiseGate","total_count":1,"children":[]},{"name":"ParametricEQ","total_count":1,"children":[]},{"name":"ReverbEffect","total_count":1,"children":[]},{"name":"Schroeder reverb: paralel komb → seri all-pass.","total_count":1,"children":[]},{"name":"Second-order IIR biquad — sabit katsayılı, scipy.signal.lfilter tabanlı.","total_count":1,"children":[]},{"name":"WahWahEffect","total_count":1,"children":[]}]},{"name":"dsp_core","total_count":35,"children":[{"name":"analyzer.py","total_count":5,"children":[{"name":"dsp_core/analyzer.py — BaglamaDSP için ses analizi =============================","total_count":1,"children":[]},{"name":"extract_audio_features()","total_count":1,"children":[]},{"name":"format_features_for_ai()","total_count":1,"children":[]},{"name":"is_silent_audio()","total_count":1,"children":[]},{"name":"separate_stem_from_song()","total_count":1,"children":[]}]},{"name":"preset_manager.py","total_count":21,"children":[{"name":"._capture_builtin()","total_count":1,"children":[]},{"name":"._capture_plugins()","total_count":1,"children":[]},{"name":"._restore_builtin()","total_count":1,"children":[]},{"name":"._restore_plugins()","total_count":1,"children":[]},{"name":".delete()","total_count":1,"children":[]},{"name":".exists()","total_count":1,"children":[]},{"name":".list_presets()","total_count":1,"children":[]},{"name":".load()","total_count":1,"children":[]},{"name":".save()","total_count":1,"children":[]},{"name":"_path_for()","total_count":1,"children":[]},{"name":"Aktif zincirdeki her VST3'ün adını ve pedalboard parametrelerini yakalar.","total_count":1,"children":[]},{"name":"DSP zinciri + VST3 parametrelerini JSON preset'e kaydeder ve yükler.      Args:","total_count":1,"children":[]},{"name":"dsp_core/preset_manager.py — Preset Kaydetme / Yükleme =========================","total_count":1,"children":[]},{"name":"get_presets_dir()","total_count":1,"children":[]},{"name":"Kaydedilen plugin listesini zincire yeniden ekler ve parametrelerini set eder.","total_count":1,"children":[]},{"name":"Mevcut DSP durumunu preset olarak kaydeder.         Aynı isimde preset varsa üze","total_count":1,"children":[]},{"name":"Mevcut preset'leri listeler.          Returns:             [{\"name\": str, \"mode\"","total_count":1,"children":[]},{"name":"Preset adını güvenli dosya adına çevirir.","total_count":1,"children":[]},{"name":"Preset dosyasını siler. Başarılıysa True döner.","total_count":1,"children":[]},{"name":"Preset'i yükler ve DSP zincirini günceller.          Returns:             Yüklen","total_count":1,"children":[]},{"name":"PresetManager","total_count":1,"children":[]}]},{"name":"rule_engine.py","total_count":9,"children":[{"name":".suggest()","total_count":1,"children":[]},{"name":".suggest_diff()","total_count":1,"children":[]},{"name":"build_diff_summary()","total_count":1,"children":[]},{"name":"build_summary()","total_count":1,"children":[]},{"name":"core/rule_engine.py — Analiz → VST Parametre Önerisi ===========================","total_count":1,"children":[]},{"name":"DiffRuleEngine","total_count":1,"children":[]},{"name":"İki analiz arasındaki farkı okunabilir özet olarak döndürür.","total_count":1,"children":[]},{"name":"İki feature dict arasındaki farkı hesaplayıp VST önerisi üretir.      Kullanım:","total_count":1,"children":[]},{"name":"ref  : Referans eser stem'inin extract_audio_features() çıktısı         mine : K","total_count":1,"children":[]}]}]},{"name":"dsp_kernels.py","total_count":15,"children":[{"name":"delay_kernel()","total_count":1,"children":[]},{"name":"Doğrusal enterpolasyonlu flanger.     Gecikme: 1–9 ms (LFO modülasyonu).      Dö","total_count":1,"children":[]},{"name":"dsp_kernels.py — Numba JIT ile derlenmiş DSP çekirdekleri ======================","total_count":1,"children":[]},{"name":"flanger_kernel()","total_count":1,"children":[]},{"name":"Geri beslemeli gecikme hattı.     Hem Delay hem Echo efektleri bu çekirdeği kull","total_count":1,"children":[]},{"name":"LFO amplitüd modülasyonu.     Döndürür: (out, phase_new)","total_count":1,"children":[]},{"name":"N-aşamalı birinci-derece all-pass phaser.     Katsayı: a = (tan(π*f/sr) - 1) / (","total_count":1,"children":[]},{"name":"njit()","total_count":1,"children":[]},{"name":"Per-sample LFO + bandpass biquad hesabı.     Biquad: DF2T (Direct Form II Transp","total_count":1,"children":[]},{"name":"phaser_kernel()","total_count":1,"children":[]},{"name":"reverb_kernel()","total_count":1,"children":[]},{"name":"tremolo_kernel()","total_count":1,"children":[]},{"name":"Tüm kernel'ları küçük bir kukla veriyle bir kez çağır.     DSPChain.__init__ son","total_count":1,"children":[]},{"name":"wah_kernel()","total_count":1,"children":[]},{"name":"warmup_all()","total_count":1,"children":[]}]},{"name":"effects.jsx","total_count":3,"children":[{"name":"EffectsRow()","total_count":1,"children":[]},{"name":"FxCard()","total_count":1,"children":[]},{"name":"Slider()","total_count":1,"children":[]}]},{"name":"gui","total_count":69,"children":[{"name":"assistant_panel.py","total_count":29,"children":[{"name":"._apply_all_diff()","total_count":1,"children":[]},{"name":"._apply_all_rec()","total_count":1,"children":[]},{"name":"._apply_single()","total_count":1,"children":[]},{"name":"._apply_suggestions_from()","total_count":1,"children":[]},{"name":"._build_rec_tab()","total_count":1,"children":[]},{"name":"._build_ref_tab()","total_count":1,"children":[]},{"name":"._latest_recording()","total_count":1,"children":[]},{"name":"._on_analyze_rec()","total_count":1,"children":[]},{"name":"._on_diff_analyze()","total_count":1,"children":[]},{"name":"._on_my_features_ready()","total_count":1,"children":[]},{"name":"._on_rec_done()","total_count":1,"children":[]},{"name":"._on_ref_done()","total_count":1,"children":[]},{"name":"._on_stem_selected()","total_count":1,"children":[]},{"name":"._pick_my_recording()","total_count":1,"children":[]},{"name":"._pick_ref_song()","total_count":1,"children":[]},{"name":"._populate_metrics()","total_count":1,"children":[]},{"name":"._populate_suggestions()","total_count":1,"children":[]},{"name":"._set_vst_param()","total_count":1,"children":[]},{"name":"._setup_ui()","total_count":1,"children":[]},{"name":".run()","total_count":1,"children":[]},{"name":".set_status()","total_count":1,"children":[]},{"name":".show_results()","total_count":1,"children":[]},{"name":"AnalyzerThread","total_count":1,"children":[]},{"name":"gui/assistant_panel.py — Saz Asistanı Paneli (v3) ==============================","total_count":1,"children":[]},{"name":"Kendi kaydın analizi bitti → diff hesapla → önerileri göster.","total_count":1,"children":[]},{"name":"MetricCard","total_count":1,"children":[]},{"name":"ResultArea","total_count":1,"children":[]},{"name":"StemSeparatorThread","total_count":1,"children":[]},{"name":"SuggestionCard","total_count":1,"children":[]}]},{"name":"effect_panel.py","total_count":3,"children":[{"name":"._build()","total_count":1,"children":[]},{"name":"_EffectCard","total_count":1,"children":[]},{"name":"_make_row()","total_count":1,"children":[]}]},{"name":"main_window.py","total_count":15,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":"._apply_mode()","total_count":1,"children":[]},{"name":"._build_ui()","total_count":1,"children":[]},{"name":"._finish_record()","total_count":1,"children":[]},{"name":"._on_preset_loaded()","total_count":1,"children":[]},{"name":"._on_record()","total_count":1,"children":[]},{"name":"._on_start()","total_count":1,"children":[]},{"name":"._on_stop()","total_count":1,"children":[]},{"name":"._open_plugins()","total_count":1,"children":[]},{"name":"._open_presets()","total_count":1,"children":[]},{"name":"._poll_queues()","total_count":1,"children":[]},{"name":"._setup_timer()","total_count":1,"children":[]},{"name":".closeEvent()","total_count":1,"children":[]},{"name":"main_window.py — Spectrum Analizörü entegreli ana pencere ======================","total_count":1,"children":[]},{"name":"Preset yüklenince EQ modunu güncelle ve UI'ı yansıt.","total_count":1,"children":[]}]},{"name":"plugin_dialog.py","total_count":3,"children":[{"name":"._add_to_chain()","total_count":1,"children":[]},{"name":"._import_file()","total_count":1,"children":[]},{"name":"._remove_from_chain()","total_count":1,"children":[]}]},{"name":"preset_panel.py","total_count":10,"children":[{"name":"._delete_selected()","total_count":1,"children":[]},{"name":"._ensure_factory_presets()","total_count":1,"children":[]},{"name":"._load_selected()","total_count":1,"children":[]},{"name":"._on_selection_changed()","total_count":1,"children":[]},{"name":"._refresh()","total_count":1,"children":[]},{"name":"._save_current()","total_count":1,"children":[]},{"name":"gui/preset_panel.py — Preset Kaydetme / Yükleme Paneli =========================","total_count":1,"children":[]},{"name":"İlk açılışta fabrika preset dosyaları yoksa oluşturur.","total_count":1,"children":[]},{"name":"Preset yönetim penceresi.      Sinyaller:         preset_loaded(str) → Preset yü","total_count":1,"children":[]},{"name":"PresetDialog","total_count":1,"children":[]}]},{"name":"spectrum_widget.py","total_count":7,"children":[{"name":"._on_freeze()","total_count":1,"children":[]},{"name":".clear()","total_count":1,"children":[]},{"name":".update_wet()","total_count":1,"children":[]},{"name":"Ana penceredeki _poll_queues() tarafından çağrılır.","total_count":1,"children":[]},{"name":"Gerçek zamanlı FFT spektrum analizörü.     main_window._poll_queues() içinden up","total_count":1,"children":[]},{"name":"Ses durdurulunca sıfırla.","total_count":1,"children":[]},{"name":"spectrum_widget.py — Gerçek zamanlı FFT Spektrum Analizörü =====================","total_count":1,"children":[]}]},{"name":"waveform_widget.py","total_count":1,"children":[{"name":".update_dry()","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"icons.jsx","total_count":22,"children":[{"name":"Icon()","total_count":1,"children":[]},{"name":"IconBolt()","total_count":1,"children":[]},{"name":"IconCheck()","total_count":1,"children":[]},{"name":"IconChip()","total_count":1,"children":[]},{"name":"IconClose()","total_count":1,"children":[]},{"name":"IconDisk()","total_count":1,"children":[]},{"name":"IconFolder()","total_count":1,"children":[]},{"name":"IconFreeze()","total_count":1,"children":[]},{"name":"IconLayers()","total_count":1,"children":[]},{"name":"IconMic()","total_count":1,"children":[]},{"name":"IconMusic()","total_count":1,"children":[]},{"name":"IconPlay()","total_count":1,"children":[]},{"name":"IconPower()","total_count":1,"children":[]},{"name":"IconRecord()","total_count":1,"children":[]},{"name":"IconRefresh()","total_count":1,"children":[]},{"name":"IconScissor()","total_count":1,"children":[]},{"name":"IconSparkle()","total_count":1,"children":[]},{"name":"IconSpectrum()","total_count":1,"children":[]},{"name":"IconStop()","total_count":1,"children":[]},{"name":"IconUpload()","total_count":1,"children":[]},{"name":"IconWarn()","total_count":1,"children":[]},{"name":"IconWave()","total_count":1,"children":[]}]},{"name":"main.py","total_count":1,"children":[{"name":"main()","total_count":1,"children":[]}]},{"name":"plugin_manager.py","total_count":7,"children":[{"name":".add_plugin_file()","total_count":1,"children":[]},{"name":".create_plugin()","total_count":1,"children":[]},{"name":".get_available_plugin_names()","total_count":1,"children":[]},{"name":".get_plugin_dir()","total_count":1,"children":[]},{"name":".scan_plugins()","total_count":1,"children":[]},{"name":"Pedalboard ile VST3 dosyalarını bizim DSP zincirine uyarlayan sarmalayıcı sınıf.","total_count":1,"children":[]},{"name":"VST3Wrapper","total_count":1,"children":[]}]},{"name":"Plugins","total_count":9,"children":[{"name":"anadolu_psych_plugin.py","total_count":3,"children":[{"name":"_fuzz()","total_count":1,"children":[]},{"name":"_tape_sat()","total_count":1,"children":[]},{"name":"AnadoluPsychPlugin v2 — Numba JIT ile optimize edilmiş =========================","total_count":1,"children":[]}]},{"name":"base_plugin.py","total_count":4,"children":[{"name":".get_parameter()","total_count":1,"children":[]},{"name":".set_parameter()","total_count":1,"children":[]},{"name":"Process a float32 buffer in range [-1, 1]. Return processed buffer.","total_count":1,"children":[]},{"name":"process()","total_count":1,"children":[]}]},{"name":"liste.txt","total_count":1,"children":[{"name":"kHs Plugin Provider","total_count":1,"children":[]}]},{"name":"chorus_plugin.py","total_count":1,"children":[]}]},{"name":"relative","total_count":14,"children":[{"name":"temp_skip","total_count":14,"children":[{"name":"CONTEXT.md","total_count":1,"children":[{"name":"CONTEXT: BaglamaDSP","total_count":1,"children":[]}]},{"name":"README.en.md","total_count":13,"children":[{"name":"Baglama Mode","total_count":1,"children":[]},{"name":"Bağımlılıklar","total_count":1,"children":[]},{"name":"Desteklenen VST3 Plugins","total_count":1,"children":[]},{"name":"Gereksinimler","total_count":1,"children":[]},{"name":"Hardware Configuration","total_count":1,"children":[]},{"name":"Kullanım","total_count":1,"children":[]},{"name":"Plugin Chain","total_count":1,"children":[]},{"name":"Proje Yapısı","total_count":1,"children":[]},{"name":"Proje: BaglamaDSP","total_count":1,"children":[]},{"name":"Reference from Track","total_count":1,"children":[]},{"name":"Saz Assistant","total_count":1,"children":[]},{"name":"Transport","total_count":1,"children":[]},{"name":"Virtual Environment","total_count":1,"children":[]}]}]}]},{"name":"scopes.jsx","total_count":2,"children":[{"name":"Spectrum()","total_count":1,"children":[]},{"name":"Waveform()","total_count":1,"children":[]}]},{"name":"temp_skip","total_count":2,"children":[{"name":"README.md","total_count":1,"children":[{"name":"BaglamaDSP","total_count":1,"children":[]}]},{"name":"requirements.txt","total_count":1,"children":[{"name":"PyQt6","total_count":1,"children":[]}]}]},{"name":"web_server.py","total_count":8,"children":[{"name":"broadcast_vitals()","total_count":1,"children":[]},{"name":"handler()","total_count":1,"children":[]},{"name":"index()","total_count":1,"children":[]},{"name":"main_ws()","total_count":1,"children":[]},{"name":"run_ws()","total_count":1,"children":[]},{"name":"static_files()","total_count":1,"children":[]},{"name":"upload()","total_count":1,"children":[]},{"name":"web_server.py — Flask static serve + asyncio WebSocket köprüsü BaglamaDSP web G","total_count":1,"children":[]}]},{"name":"config.py","total_count":1,"children":[]},{"name":"test.py","total_count":1,"children":[]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>
