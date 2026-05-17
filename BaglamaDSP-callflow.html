@@ -1,0 +1,3386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaglamaDSP — Complete Call Flow &amp; Architecture Documentation</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --border: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8;
+  --warn: #fbbf24; --err: #f87171; --ok: #34d399;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+h1 { font-size: 2.4rem; margin-bottom: 8px; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+h2 { font-size: 1.7rem; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); }
+h3 { font-size: 1.25rem; margin: 32px 0 12px; color: var(--accent); }
+h4 { font-size: 1.05rem; margin: 20px 0 8px; color: var(--warn); }
+p { margin: 8px 0; color: var(--muted); }
+.subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 32px; }
+.mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 20px 0; overflow-x: auto; position: relative; }
+.mermaid.is-enhanced { padding: 0; overflow: hidden; min-height: 260px; }
+.mermaid-viewport { padding: 54px 24px 24px; overflow: hidden; cursor: grab; touch-action: none; min-height: 260px; }
+.mermaid-viewport.is-dragging { cursor: grabbing; }
+.mermaid-viewport svg { max-width: none !important; height: auto; transform-origin: 0 0; transition: transform 120ms ease; }
+.mermaid-toolbar { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(15,23,42,0.92); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
+.mermaid-toolbar button, .mermaid-toolbar .zoom-level { height: 28px; min-width: 32px; border: 1px solid var(--border); border-radius: 6px; background: #1e293b; color: var(--text); font: 600 0.78rem system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; }
+.mermaid-toolbar button { cursor: pointer; }
+.mermaid-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.mermaid-toolbar .zoom-level { min-width: 52px; color: var(--muted); background: transparent; }
+.call-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+.call-table th { background: #1a2744; color: var(--accent); text-align: left; padding: 10px 14px; border: 1px solid var(--border); }
+.call-table td { padding: 8px 14px; border: 1px solid var(--border); vertical-align: top; }
+.call-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+.tag-async { background: #7c3aed33; color: #a78bfa; }
+.tag-class { background: #05966933; color: var(--ok); }
+.tag-func { background: #2563eb33; color: var(--accent); }
+.tag-cmd { background: #d9770633; color: var(--warn); }
+.tag-endpoint { background: #dc262633; color: var(--err); }
+.tag-hook { background: #db277733; color: #f472b6; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin: 16px 0; }
+.arrow-chain { font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--accent); padding: 10px; background: rgba(56,189,248,0.06); border-radius: 6px; }
+code { font-family: 'Fira Code', 'Cascadia Code', monospace; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 3px; font-size: 0.88em; }
+ul, ol { margin: 8px 0 8px 24px; color: var(--muted); }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+.nav { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.9rem; }
+.nav a { text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
+@media (max-width: 768px) { .container { padding: 16px; } h1 { font-size: 1.8rem; } }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>BaglamaDSP — Complete Call Flow &amp; Architecture Documentation</h1>
+<p class="subtitle">Generated from graphify knowledge graph: 277 nodes, 439 edges, 36 communities. Commit: ff3e406</p>
+
+<div class="nav">
+    <a href="#overview">Architecture Overview</a>
+    <a href="#build-graph">Graph Build</a>
+    <a href="#cli-skills">CLI &amp; Skill Installers</a>
+    <a href="#ingest-cache-update">Ingestion &amp; Updates</a>
+    <a href="#serve-api">Serving API</a>
+    <a href="#tests-fixtures">Tests &amp; Fixtures</a>
+    <a href="#dsp-kernelspy-pluginpy">Dsp Kernelspy Pluginpy</a>
+    <a href="#iconsjsx-icon-iconplay">Iconsjsx Icon Iconplay</a>
+    <a href="#dsp-chainpy-set">Dsp Chainpy Set</a>
+    <a href="#preset-dsp-managerpy">Preset Dsp Managerpy</a>
+    <a href="#appjsx-usetoasts-toasts">Appjsx Usetoasts Toasts</a>
+    <a href="#effectsjsx-slider-fxcard">Effectsjsx Slider Fxcard</a>
+    <a href="#scopesjsx-waveform-spectrum">Scopesjsx Waveform Spectrum</a>
+    <a href="#temp-skip-baglamadsp">Temp Skip Baglamadsp</a>
+    <a href="#configpy">Configpy</a>
+    <a href="#other">Other</a>
+</div>
+
+<!-- ====== Architecture Overview ====== -->
+<h2 id="overview">1. Architecture Overview</h2>
+
+<div class="mermaid">
+
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    BUILD_GRAPH_321CBB04("Graph Build<br/><small>43 nodes</small>")
+    class BUILD_GRAPH_321CBB04 module;
+    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>50 nodes</small>")
+    class CLI_SKILLS_9964CBB8 module;
+    INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>46 nodes</small>")
+    class INGEST_CACHE_UPDATE_FF457338 module;
+    SERVE_API_35EC8E86("Serving API<br/><small>9 nodes</small>")
+    class SERVE_API_35EC8E86 module;
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>1 nodes</small>")
+    class TESTS_FIXTURES_B84B1DCC module;
+    DSP_KERNELSPY_PLUGINPY_477B3E0C("Dsp Kernelspy Pluginpy<br/><small>27 nodes</small>")
+    class DSP_KERNELSPY_PLUGINPY_477B3E0C module;
+    ICONSJSX_ICON_ICONPLAY_E2762343("Iconsjsx Icon Iconplay<br/><small>23 nodes</small>")
+    class ICONSJSX_ICON_ICONPLAY_E2762343 module;
+    DSP_CHAINPY_SET_B8EE97DA("Dsp Chainpy Set<br/><small>21 nodes</small>")
+    class DSP_CHAINPY_SET_B8EE97DA module;
+    PRESET_DSP_MANAGERPY_7892FEBF("Preset Dsp Managerpy<br/><small>21 nodes</small>")
+    class PRESET_DSP_MANAGERPY_7892FEBF module;
+    APPJSX_USETOASTS_TOASTS_FBAD06C7("Appjsx Usetoasts Toasts<br/><small>7 nodes</small>")
+    class APPJSX_USETOASTS_TOASTS_FBAD06C7 module;
+    EFFECTSJSX_SLIDER_FXCARD_DEF148C0("Effectsjsx Slider Fxcard<br/><small>4 nodes</small>")
+    class EFFECTSJSX_SLIDER_FXCARD_DEF148C0 module;
+    SCOPESJSX_WAVEFORM_SPECTRUM_35A36C6F("Scopesjsx Waveform Spectrum<br/><small>3 nodes</small>")
+    class SCOPESJSX_WAVEFORM_SPECTRUM_35A36C6F module;
+    TEMP_SKIP_BAGLAMADSP_B2BE6AE8("Temp Skip Baglamadsp<br/><small>2 nodes</small>")
+    class TEMP_SKIP_BAGLAMADSP_B2BE6AE8 module;
+    CONFIGPY_E6F4F1FD("Configpy<br/><small>1 nodes</small>")
+    class CONFIGPY_E6F4F1FD module;
+    OTHER_D0941E68("Other<br/><small>19 nodes</small>")
+    class OTHER_D0941E68 module;
+    BUILD_GRAPH_321CBB04 -->|method x13| CLI_SKILLS_9964CBB8
+    INGEST_CACHE_UPDATE_FF457338 -->|calls x10| CLI_SKILLS_9964CBB8
+    DSP_CHAINPY_SET_B8EE97DA -->|calls x6| CLI_SKILLS_9964CBB8
+    DSP_CHAINPY_SET_B8EE97DA -->|method x6| DSP_KERNELSPY_PLUGINPY_477B3E0C
+    INGEST_CACHE_UPDATE_FF457338 -->|method x4| DSP_KERNELSPY_PLUGINPY_477B3E0C
+    DSP_CHAINPY_SET_B8EE97DA -->|contains x3| INGEST_CACHE_UPDATE_FF457338
+    CLI_SKILLS_9964CBB8 -->|method x3| DSP_KERNELSPY_PLUGINPY_477B3E0C
+    CLI_SKILLS_9964CBB8 -->|calls x2| BUILD_GRAPH_321CBB04
+    BUILD_GRAPH_321CBB04 -->|method| INGEST_CACHE_UPDATE_FF457338
+    INGEST_CACHE_UPDATE_FF457338 -->|method| BUILD_GRAPH_321CBB04
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Architecture Layers</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
+      <tr><td>Graph Build</td><td>43</td><td><code>0</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>50</td><td><code>1, 8</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>46</td><td><code>5, 7, 11</code></td></tr><tr><td>Serving API</td><td>9</td><td><code>9</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>1</td><td><code>16</code></td></tr><tr><td>Dsp Kernelspy Pluginpy</td><td>27</td><td><code>2</code></td></tr><tr><td>Iconsjsx Icon Iconplay</td><td>23</td><td><code>3</code></td></tr><tr><td>Dsp Chainpy Set</td><td>21</td><td><code>4</code></td></tr><tr><td>Preset Dsp Managerpy</td><td>21</td><td><code>6</code></td></tr><tr><td>Appjsx Usetoasts Toasts</td><td>7</td><td><code>10</code></td></tr><tr><td>Effectsjsx Slider Fxcard</td><td>4</td><td><code>12</code></td></tr><tr><td>Scopesjsx Waveform Spectrum</td><td>3</td><td><code>13</code></td></tr><tr><td>Temp Skip Baglamadsp</td><td>2</td><td><code>14</code></td></tr><tr><td>Configpy</td><td>1</td><td><code>15</code></td></tr><tr><td>Other</td><td>19</td><td><code>17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35</code></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Core Flow</h4>
+    <div class="arrow-chain">Serving API -&gt; Graph Build -&gt; CLI &amp; Skill Installers -&gt; Dsp Kernelspy Pluginpy -&gt; Ingestion &amp; Updates -&gt; Tests &amp; Fixtures -&gt; Iconsjsx Icon Iconplay</div>
+  </div>
+</div>
+<hr>
+<!-- ====== 2. Graph Build ====== -->
+<h2 id="build-graph">2. Graph Build</h2>
+<p>Graph Build groups implementation around assistant, panelpy, gui, rule, mostly in gui/assistant_panel.py, dsp_core/rule_engine.py, assistant.jsx. This section covers 43 nodes and 93 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Graph Build (43 nodes, 93 edges)
+    subgraph build_graph_gui_assistant_panel_py_d81afeb4["gui/assistant_panel.py"]
+        gui_assistant_panel_py_3270480c("assistant_panel.py")
+        gui_assistant_panel_resultarea_set_status_a826fcf8("set_status()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_resultarea_949e2c63("ResultArea<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_resultarea_show_results_2120df0d("show_results()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_analyzerthread_762aff16("AnalyzerThread<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_build_ref_tab_f5c90503("_build_ref_tab()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_on_stem_selec_4401b445("_on_stem_selected()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_on_analyze_re_e5ca9183("_on_analyze_rec()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_on_rec_done_7676474b("_on_rec_done()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_apply_all_rec_541be6d6("_apply_all_rec()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_pick_ref_song_8324f5d7("_pick_ref_song()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_on_ref_done_841f4615("_on_ref_done()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_pick_my_recor_07a034b7("_pick_my_recording()<br/><small>gui/assistant_panel.py</small>")
+    end
+    subgraph build_graph_dsp_core_rule_engine_py_7a516a42["dsp_core/rule_engine.py"]
+        dsp_core_rule_engine_ruleengine_suggest_4b8a6c4d("suggest()<br/><small>dsp_core/rule_engine.py</small>")
+        dsp_core_rule_engine_diffruleengine_suggest_diff_bf2c9c7b("suggest_diff()<br/><small>dsp_core/rule_engine.py</small>")
+        dsp_core_rule_engine_py_c6e96267("rule_engine.py")
+        dsp_core_rule_engine_diffruleengine_00167421("DiffRuleEngine<br/><small>dsp_core/rule_engine.py</small>")
+    end
+    baglamadsp_assistant_suggestion_9f9c747c("Suggestion()<br/><small>assistant.jsx</small>")
+    baglamadsp_assistant_suggestion_9f9c747c -->|calls| dsp_core_rule_engine_ruleengine_suggest_4b8a6c4d
+    baglamadsp_assistant_suggestion_9f9c747c -->|calls| dsp_core_rule_engine_diffruleengine_suggest_diff_bf2c9c7b
+    dsp_core_rule_engine_py_c6e96267 -->|method| dsp_core_rule_engine_ruleengine_suggest_4b8a6c4d
+    dsp_core_rule_engine_diffruleengine_00167421 -->|method| dsp_core_rule_engine_diffruleengine_suggest_diff_bf2c9c7b
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_build_ref_tab_f5c90503
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_on_stem_selec_4401b445
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_on_analyze_re_e5ca9183
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_on_rec_done_7676474b
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_apply_all_rec_541be6d6
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_pick_ref_song_8324f5d7
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_on_ref_done_841f4615
+    gui_assistant_panel_py_3270480c -->|method| gui_assistant_panel_assistantpanel_pick_my_recor_07a034b7
+    gui_assistant_panel_analyzerthread_762aff16 -->|calls| gui_assistant_panel_assistantpanel_on_analyze_re_e5ca9183
+    gui_assistant_panel_resultarea_949e2c63 -->|method| gui_assistant_panel_resultarea_show_results_2120df0d
+    gui_assistant_panel_resultarea_949e2c63 -->|method| gui_assistant_panel_resultarea_set_status_a826fcf8
+    gui_assistant_panel_resultarea_949e2c63 -->|calls| gui_assistant_panel_assistantpanel_build_ref_tab_f5c90503
+    gui_assistant_panel_resultarea_show_results_2120df0d -->|calls| gui_assistant_panel_assistantpanel_on_rec_done_7676474b
+    gui_assistant_panel_resultarea_show_results_2120df0d -->|calls| gui_assistant_panel_assistantpanel_on_ref_done_841f4615
+    gui_assistant_panel_resultarea_set_status_a826fcf8 -->|calls| gui_assistant_panel_assistantpanel_on_analyze_re_e5ca9183
+    gui_assistant_panel_assistantpanel_build_ref_tab_f5c90503 -->|calls| gui_assistant_panel_assistantpanel_on_stem_selec_4401b445
+    %% Omitted for readability: 25 nodes, 0 edges
+    class gui_assistant_panel_py_3270480c module;
+    class gui_assistant_panel_resultarea_set_status_a826fcf8 function;
+    class gui_assistant_panel_resultarea_949e2c63 klass;
+    class gui_assistant_panel_resultarea_show_results_2120df0d function;
+    class gui_assistant_panel_analyzerthread_762aff16 klass;
+    class gui_assistant_panel_assistantpanel_build_ref_tab_f5c90503 function;
+    class gui_assistant_panel_assistantpanel_on_stem_selec_4401b445 function;
+    class gui_assistant_panel_assistantpanel_on_analyze_re_e5ca9183 function;
+    class gui_assistant_panel_assistantpanel_on_rec_done_7676474b function;
+    class gui_assistant_panel_assistantpanel_apply_all_rec_541be6d6 function;
+    class gui_assistant_panel_assistantpanel_pick_ref_song_8324f5d7 function;
+    class gui_assistant_panel_assistantpanel_on_ref_done_841f4615 function;
+    class gui_assistant_panel_assistantpanel_pick_my_recor_07a034b7 function;
+    class dsp_core_rule_engine_ruleengine_suggest_4b8a6c4d function;
+    class dsp_core_rule_engine_diffruleengine_suggest_diff_bf2c9c7b function;
+    class dsp_core_rule_engine_py_c6e96267 module;
+    class dsp_core_rule_engine_diffruleengine_00167421 klass;
+    class baglamadsp_assistant_suggestion_9f9c747c ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>assistant.jsx</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>assistant.jsx node in assistant.jsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>SUGGESTIONS_REF</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>SUGGESTIONS_REF node in assistant.jsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>Pill()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Pill() node in assistant.jsx.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>AnalyzerThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>MetricCard</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+5 more</td>
+  <td>Suggestion() node in assistant.jsx.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>SazAssistant()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>SazAssistant() node in assistant.jsx.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_apply_suggestions_from()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>AnalyzerThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+6 more</td>
+  <td>Module file in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>.suggest()</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>.suggest() node in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>build_summary()</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>build_summary() node in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_apply_all_diff()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_on_my_features_ready()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>AnalyzerThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+6 more</td>
+  <td>DiffRuleEngine node in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>.suggest_diff()</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>.suggest_diff() node in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>build_diff_summary()</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>build_diff_summary() node in dsp_core/rule_engine.py.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>core/rule_engine.py — Analiz → VST Parametre Önerisi ===========================</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for core/rule_engine.py — Analiz → VST Parametre Önerisi ===========================.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>İki feature dict arasındaki farkı hesaplayıp VST önerisi üretir.      Kullanım:</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for İki feature dict arasındaki farkı hesaplayıp VST önerisi üretir.      Kullanım:.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>ref  : Referans eser stem&#x27;inin extract_audio_features() çıktısı         mine : K</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for ref  : Referans eser stem&#x27;inin extract_audio_features() çıktısı         mine : K.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_apply_all_diff()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_apply_all_rec()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_apply_single()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+12 more</td>
+  <td>Module file in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>AnalyzerThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_on_analyze_rec()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_on_diff_analyze()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>Orchestrates analysis and returns structured documentation data.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>QThread</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>QThread node in project.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>StemSeparatorThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_on_analyze_rec()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>StemSeparatorThread node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>MetricCard</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_populate_metrics()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>MetricCard node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>QFrame</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_build_ref_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>QFrame node in project.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>SuggestionCard</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_populate_suggestions()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>SuggestionCard node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>DiffRuleEngine</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small><br><code>Suggestion()</code><br><small style="color:var(--muted)">assistant.jsx</small></td>
+  <td><code>_build_ref_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_populate_metrics()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_populate_suggestions()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+2 more</td>
+  <td>ResultArea node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>.show_results()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>rule_engine.py</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><code>_on_rec_done()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_on_ref_done()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_populate_metrics()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+1 more</td>
+  <td>.show_results() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>.set_status()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><code>_apply_all_diff()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_apply_single()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>_apply_suggestions_from()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+3 more</td>
+  <td>.set_status() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>._populate_metrics()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>MetricCard</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>show_results()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._populate_metrics() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>._populate_suggestions()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>show_results()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>SuggestionCard</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><code>_on_my_features_ready()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>._populate_suggestions() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>._build_ref_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>QFrame</code><br><code>ResultArea</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><code>_on_stem_selected()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>._build_ref_tab() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td><code>._on_stem_selected()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_build_ref_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._on_stem_selected() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td><code>._on_analyze_rec()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>AnalyzerThread</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>set_status()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+1 more</td>
+  <td><code>_latest_recording()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>Orchestrates analysis and returns structured documentation data.</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>._on_rec_done()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>assistant_panel.py</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>show_results()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._on_rec_done() node in gui/assistant_panel.py.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>gui/assistant_panel.py</code></td><td>27 nodes</td></tr>
+<tr><td><code>dsp_core/rule_engine.py</code></td><td>9 nodes</td></tr>
+<tr><td><code>assistant.jsx</code></td><td>5 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: calls x27, method x21, contains x14, explains x5. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 3. CLI & Skill Installers ====== -->
+<h2 id="cli-skills">3. CLI &amp; Skill Installers</h2>
+<p>CLI &amp; Skill Installers groups implementation around gui, panelpy, preset, windowpy, mostly in gui/main_window.py, gui/preset_panel.py, gui/spectrum_widget.py. This section covers 50 nodes and 96 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: CLI &amp; Skill Installers (50 nodes, 96 edges)
+    subgraph cli_skills_gui_main_window_py_09bfeb55["gui/main_window.py"]
+        gui_main_window_mainwindow_init_91c1525b("__init__()<br/><small>gui/main_window.py</small>")
+        gui_main_window_mainwindow_build_ui_53a80e87("_build_ui()<br/><small>gui/main_window.py</small>")
+        gui_main_window_mainwindow_setup_timer_176c882d("_setup_timer()<br/><small>gui/main_window.py</small>")
+        gui_main_window_mainwindow_poll_queues_3fa1b7c9("_poll_queues()<br/><small>gui/main_window.py</small>")
+        gui_main_window_mainwindow_open_presets_6cdf0d9e("_open_presets()<br/><small>gui/main_window.py</small>")
+    end
+    subgraph cli_skills_gui_effect_panel_py_98cc2fe2["gui/effect_panel.py"]
+        gui_effect_panel_make_row_381d0476("_make_row()<br/><small>gui/effect_panel.py</small>")
+        gui_effect_panel_effectpanel_build_4d388d3a("_build()<br/><small>gui/effect_panel.py</small>")
+        gui_effect_panel_py_a040ec2b("effect_panel.py")
+        gui_effect_panel_effectcard_9e1f9cbd("_EffectCard<br/><small>gui/effect_panel.py</small>")
+    end
+    subgraph cli_skills_External_generated_0c226fa1["External / generated"]
+        qmainwindow_c5adf44a("QMainWindow")
+        qwidget_d5c935e9("QWidget")
+        qgroupbox_4e4ef024("QGroupBox")
+    end
+    subgraph cli_skills_gui_assistant_panel_py_c646f286["gui/assistant_panel.py"]
+        gui_assistant_panel_assistantpanel_setup_ui_3104cbd7("_setup_ui()<br/><small>gui/assistant_panel.py</small>")
+        gui_assistant_panel_assistantpanel_build_rec_tab_306b3daf("_build_rec_tab()<br/><small>gui/assistant_panel.py</small>")
+    end
+    gui_plugin_dialog_py_00d21a4d("plugin_dialog.py")
+    gui_preset_panel_presetdialog_c2bb5491("PresetDialog<br/><small>gui/preset_panel.py</small>")
+    gui_spectrum_widget_py_6f68915f("spectrum_widget.py")
+    gui_waveform_widget_py_8057c8fc("waveform_widget.py")
+    qwidget_d5c935e9 -->|calls| gui_main_window_mainwindow_init_91c1525b
+    qwidget_d5c935e9 -->|calls| gui_assistant_panel_assistantpanel_build_rec_tab_306b3daf
+    qwidget_d5c935e9 -->|calls| gui_effect_panel_make_row_381d0476
+    qwidget_d5c935e9 -->|calls| gui_effect_panel_effectpanel_build_4d388d3a
+    gui_assistant_panel_assistantpanel_setup_ui_3104cbd7 -->|calls| gui_main_window_mainwindow_init_91c1525b
+    gui_assistant_panel_assistantpanel_setup_ui_3104cbd7 -->|calls| gui_assistant_panel_assistantpanel_build_rec_tab_306b3daf
+    gui_assistant_panel_assistantpanel_setup_ui_3104cbd7 -->|method| gui_spectrum_widget_py_6f68915f
+    gui_assistant_panel_assistantpanel_setup_ui_3104cbd7 -->|method| gui_waveform_widget_py_8057c8fc
+    gui_effect_panel_py_a040ec2b -->|method| gui_main_window_mainwindow_init_91c1525b
+    gui_effect_panel_py_a040ec2b -->|method| gui_effect_panel_effectpanel_build_4d388d3a
+    gui_effect_panel_make_row_381d0476 -->|calls| gui_main_window_mainwindow_init_91c1525b
+    gui_effect_panel_make_row_381d0476 -->|calls| gui_effect_panel_effectpanel_build_4d388d3a
+    gui_effect_panel_effectcard_9e1f9cbd -->|method| gui_main_window_mainwindow_init_91c1525b
+    gui_effect_panel_effectcard_9e1f9cbd -->|calls| gui_effect_panel_effectpanel_build_4d388d3a
+    qgroupbox_4e4ef024 -->|calls| gui_effect_panel_effectpanel_build_4d388d3a
+    gui_effect_panel_effectpanel_build_4d388d3a -->|calls| gui_main_window_mainwindow_init_91c1525b
+    qmainwindow_c5adf44a -->|method| gui_main_window_mainwindow_init_91c1525b
+    qmainwindow_c5adf44a -->|method| gui_main_window_mainwindow_build_ui_53a80e87
+    qmainwindow_c5adf44a -->|method| gui_main_window_mainwindow_setup_timer_176c882d
+    qmainwindow_c5adf44a -->|method| gui_main_window_mainwindow_poll_queues_3fa1b7c9
+    qmainwindow_c5adf44a -->|method| gui_main_window_mainwindow_open_presets_6cdf0d9e
+    gui_main_window_mainwindow_init_91c1525b -->|calls| gui_main_window_mainwindow_build_ui_53a80e87
+    gui_main_window_mainwindow_init_91c1525b -->|calls| gui_main_window_mainwindow_setup_timer_176c882d
+    gui_main_window_mainwindow_init_91c1525b -->|method| gui_plugin_dialog_py_00d21a4d
+    %% Omitted for readability: 32 nodes, 5 edges
+    class gui_main_window_mainwindow_init_91c1525b function;
+    class gui_main_window_mainwindow_build_ui_53a80e87 function;
+    class gui_main_window_mainwindow_setup_timer_176c882d function;
+    class gui_main_window_mainwindow_poll_queues_3fa1b7c9 function;
+    class gui_main_window_mainwindow_open_presets_6cdf0d9e function;
+    class gui_effect_panel_make_row_381d0476 function;
+    class gui_effect_panel_effectpanel_build_4d388d3a function;
+    class gui_effect_panel_py_a040ec2b module;
+    class gui_effect_panel_effectcard_9e1f9cbd function;
+    class qmainwindow_c5adf44a klass;
+    class qwidget_d5c935e9 klass;
+    class qgroupbox_4e4ef024 klass;
+    class gui_assistant_panel_assistantpanel_setup_ui_3104cbd7 function;
+    class gui_assistant_panel_assistantpanel_build_rec_tab_306b3daf function;
+    class gui_plugin_dialog_py_00d21a4d module;
+    class gui_preset_panel_presetdialog_c2bb5491 klass;
+    class gui_spectrum_widget_py_6f68915f test;
+    class gui_waveform_widget_py_8057c8fc module;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>QWidget</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_build_rec_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+1 more</td>
+  <td>QWidget node in project.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>._setup_ui()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build_rec_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>spectrum_widget.py</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small><br>+1 more</td>
+  <td>._setup_ui() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>._build_rec_tab()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_setup_ui()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br><code>QWidget</code></td>
+  <td>No direct outbound edge</td>
+  <td>._build_rec_tab() node in gui/assistant_panel.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>effect_panel.py</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br>+2 more</td>
+  <td>Module file in gui/effect_panel.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>_make_row()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QWidget</code></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td>_make_row() node in gui/effect_panel.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>_EffectCard</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td>_EffectCard node in gui/effect_panel.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>QGroupBox</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td>QGroupBox node in project.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>._build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_EffectCard</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_make_row()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>effect_panel.py</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br>+2 more</td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td>._build() node in gui/effect_panel.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>QMainWindow</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>effect_panel.py</code><br><small style="color:var(--muted)">gui/effect_panel.py</small></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_apply_mode()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br>+14 more</td>
+  <td>QMainWindow node in project.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>.__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_build()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_EffectCard</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>_make_row()</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br>+5 more</td>
+  <td><code>_apply_mode()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_ensure_factory_presets()</code><br><small style="color:var(--muted)">gui/preset_panel.py</small><br>+6 more</td>
+  <td>.__init__() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>._build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>effect_panel.py</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>QGroupBox</code><br>+1 more</td>
+  <td><code>_apply_mode()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>plugin_dialog.py</code><br><small style="color:var(--muted)">gui/plugin_dialog.py</small><br><code>PresetDialog</code><br><small style="color:var(--muted)">gui/preset_panel.py</small><br>+2 more</td>
+  <td>._build_ui() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>._setup_timer()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>QMainWindow</code></td>
+  <td>No direct outbound edge</td>
+  <td>._setup_timer() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>._poll_queues()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QMainWindow</code></td>
+  <td>No direct outbound edge</td>
+  <td>._poll_queues() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>._on_preset_loaded()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>effect_panel.py</code><br><small style="color:var(--muted)">gui/effect_panel.py</small><br><code>QMainWindow</code></td>
+  <td><code>_apply_mode()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td>._on_preset_loaded() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>._apply_mode()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_on_preset_loaded()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br>+1 more</td>
+  <td>No direct outbound edge</td>
+  <td>._apply_mode() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>._on_start()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QMainWindow</code></td>
+  <td>No direct outbound edge</td>
+  <td>._on_start() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>._on_stop()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QMainWindow</code></td>
+  <td><code>_finish_record()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td>._on_stop() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>._on_record()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QMainWindow</code></td>
+  <td><code>_finish_record()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td>._on_record() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>._finish_record()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_on_record()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_on_stop()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>QMainWindow</code></td>
+  <td>No direct outbound edge</td>
+  <td>._finish_record() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>.closeEvent()</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>QMainWindow</code></td>
+  <td>No direct outbound edge</td>
+  <td>.closeEvent() node in gui/main_window.py.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>main_window.py — Spectrum Analizörü entegreli ana pencere ======================</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for main_window.py — Spectrum Analizörü entegreli ana pencere ======================.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>Preset yüklenince EQ modunu güncelle ve UI&#x27;ı yansıt.</code><br><small style="color:var(--muted)">gui/main_window.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Preset yüklenince EQ modunu güncelle ve UI&#x27;ı yansıt..</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>spectrum_widget.py</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td><code>__init__()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_build_ui()</code><br><small style="color:var(--muted)">gui/main_window.py</small><br><code>_setup_ui()</code><br><small style="color:var(--muted)">gui/assistant_panel.py</small><br>+1 more</td>
+  <td><code>_on_freeze()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small><br><code>clear()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small><br><code>update_wet()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td>Module file in gui/spectrum_widget.py.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>.update_wet()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td><code>spectrum_widget.py</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><code>waveform_widget.py</code><br><small style="color:var(--muted)">gui/waveform_widget.py</small></td>
+  <td>.update_wet() node in gui/spectrum_widget.py.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>.clear()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td><code>spectrum_widget.py</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><code>waveform_widget.py</code><br><small style="color:var(--muted)">gui/waveform_widget.py</small></td>
+  <td>.clear() node in gui/spectrum_widget.py.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>._on_freeze()</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td><code>spectrum_widget.py</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._on_freeze() node in gui/spectrum_widget.py.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>spectrum_widget.py — Gerçek zamanlı FFT Spektrum Analizörü =====================</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for spectrum_widget.py — Gerçek zamanlı FFT Spektrum Analizörü =====================.</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td><code>Gerçek zamanlı FFT spektrum analizörü.     main_window._poll_queues() içinden up</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Gerçek zamanlı FFT spektrum analizörü.     main_window._poll_queues() içinden up.</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td><code>Ana penceredeki _poll_queues() tarafından çağrılır.</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Ana penceredeki _poll_queues() tarafından çağrılır..</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>Ses durdurulunca sıfırla.</code><br><small style="color:var(--muted)">gui/spectrum_widget.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Ses durdurulunca sıfırla..</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>gui/main_window.py</code></td><td>15 nodes</td></tr>
+<tr><td><code>gui/preset_panel.py</code></td><td>11 nodes</td></tr>
+<tr><td><code>gui/spectrum_widget.py</code></td><td>8 nodes</td></tr>
+<tr><td><code>gui/effect_panel.py</code></td><td>4 nodes</td></tr>
+<tr><td><code>gui/plugin_dialog.py</code></td><td>4 nodes</td></tr>
+<tr><td><code>gui/assistant_panel.py</code></td><td>2 nodes</td></tr>
+<tr><td><code>gui/waveform_widget.py</code></td><td>2 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: method x40, calls x25, explains x9, inherits x6. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 4. Ingestion & Updates ====== -->
+<h2 id="ingest-cache-update">4. Ingestion &amp; Updates</h2>
+<p>Ingestion &amp; Updates groups implementation around dsp, chainpy, audio, plugin, mostly in dsp_chain.py, audio_engine.py, plugin_manager.py. This section covers 46 nodes and 54 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Ingestion &amp; Updates (46 nodes, 54 edges)
+    subgraph ingest_cache_update_audio_engine_py_88f9cdf7["audio_engine.py"]
+        audio_engine_py_62fa7189("audio_engine.py")
+        baglamadsp_audio_engine_audioengine_find_devices_1678f8ed("_find_devices()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_callback_34a109ba("_callback()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_start_f005ef89("start()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_stop_d424e9c0("stop()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_start_record_8901c545("start_recording()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_stop_recordi_ae7ddf26("stop_recording()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_save_wav_1792c4aa("_save_wav()<br/><small>audio_engine.py</small>")
+        baglamadsp_audio_engine_audioengine_get_availabl_f2e1e177("get_available_devices()<br/><small>audio_engine.py</small>")
+    end
+    subgraph ingest_cache_update_dsp_chain_py_68477923["dsp_chain.py"]
+        baglamadsp_dsp_chain_parametriceq_16f9db6e("ParametricEQ<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_biquadfilter_2ff0b098("BiquadFilter<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_distortioneffect_830b0b84("DistortionEffect<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_biquadfilter_set_peaking_f2143520("set_peaking()<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_biquadfilter_set_lowshelf_faac2642("set_lowshelf()<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_biquadfilter_set_highshelf_83ed44d1("set_highshelf()<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_biquadfilter_set_bandpass_9e60769f("set_bandpass()<br/><small>dsp_chain.py</small>")
+        baglamadsp_dsp_chain_parametriceq_update_all_29087c73("_update_all()<br/><small>dsp_chain.py</small>")
+    end
+    plugin_manager_py_98d7e81b("plugin_manager.py")
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_find_devices_1678f8ed
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_callback_34a109ba
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_start_f005ef89
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_stop_d424e9c0
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_start_record_8901c545
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_stop_recordi_ae7ddf26
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_save_wav_1792c4aa
+    audio_engine_py_62fa7189 -->|method| baglamadsp_audio_engine_audioengine_get_availabl_f2e1e177
+    baglamadsp_audio_engine_audioengine_start_f005ef89 -->|calls| baglamadsp_audio_engine_audioengine_stop_recordi_ae7ddf26
+    baglamadsp_dsp_chain_biquadfilter_2ff0b098 -->|method| baglamadsp_dsp_chain_biquadfilter_set_lowshelf_faac2642
+    baglamadsp_dsp_chain_biquadfilter_2ff0b098 -->|method| baglamadsp_dsp_chain_biquadfilter_set_highshelf_83ed44d1
+    baglamadsp_dsp_chain_biquadfilter_2ff0b098 -->|method| baglamadsp_dsp_chain_biquadfilter_set_peaking_f2143520
+    baglamadsp_dsp_chain_biquadfilter_2ff0b098 -->|method| baglamadsp_dsp_chain_biquadfilter_set_bandpass_9e60769f
+    baglamadsp_dsp_chain_biquadfilter_set_lowshelf_faac2642 -->|calls| baglamadsp_dsp_chain_parametriceq_update_all_29087c73
+    baglamadsp_dsp_chain_biquadfilter_set_highshelf_83ed44d1 -->|calls| baglamadsp_dsp_chain_parametriceq_update_all_29087c73
+    baglamadsp_dsp_chain_biquadfilter_set_peaking_f2143520 -->|calls| baglamadsp_dsp_chain_parametriceq_update_all_29087c73
+    baglamadsp_dsp_chain_parametriceq_16f9db6e -->|method| baglamadsp_dsp_chain_parametriceq_update_all_29087c73
+    %% Omitted for readability: 28 nodes, 0 edges
+    class audio_engine_py_62fa7189 module;
+    class baglamadsp_audio_engine_audioengine_find_devices_1678f8ed function;
+    class baglamadsp_audio_engine_audioengine_callback_34a109ba function;
+    class baglamadsp_audio_engine_audioengine_start_f005ef89 function;
+    class baglamadsp_audio_engine_audioengine_stop_d424e9c0 function;
+    class baglamadsp_audio_engine_audioengine_start_record_8901c545 function;
+    class baglamadsp_audio_engine_audioengine_stop_recordi_ae7ddf26 function;
+    class baglamadsp_audio_engine_audioengine_save_wav_1792c4aa function;
+    class baglamadsp_audio_engine_audioengine_get_availabl_f2e1e177 function;
+    class baglamadsp_dsp_chain_parametriceq_16f9db6e klass;
+    class baglamadsp_dsp_chain_biquadfilter_2ff0b098 klass;
+    class baglamadsp_dsp_chain_distortioneffect_830b0b84 klass;
+    class baglamadsp_dsp_chain_biquadfilter_set_peaking_f2143520 function;
+    class baglamadsp_dsp_chain_biquadfilter_set_lowshelf_faac2642 function;
+    class baglamadsp_dsp_chain_biquadfilter_set_highshelf_83ed44d1 function;
+    class baglamadsp_dsp_chain_biquadfilter_set_bandpass_9e60769f function;
+    class baglamadsp_dsp_chain_parametriceq_update_all_29087c73 function;
+    class plugin_manager_py_98d7e81b module;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_callback()</code><br><small style="color:var(--muted)">audio_engine.py</small><br><code>_find_devices()</code><br><small style="color:var(--muted)">audio_engine.py</small><br><code>_save_wav()</code><br><small style="color:var(--muted)">audio_engine.py</small><br>+6 more</td>
+  <td>Module file in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>._find_devices()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._find_devices() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>._callback()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._callback() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>.start()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><code>stop_recording()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>.start() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>.stop()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.stop() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>.start_recording()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.start_recording() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>.stop_recording()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small><br><code>start()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.stop_recording() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>._save_wav()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._save_wav() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>is_running()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>is_running() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>is_recording()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>is_recording() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>.get_available_devices()</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.get_available_devices() node in audio_engine.py.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>main.py</code><br><small style="color:var(--muted)">main.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in main.py.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>main()</code><br><small style="color:var(--muted)">main.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>audio_engine.py</code><br><small style="color:var(--muted)">audio_engine.py</small></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>main() node in main.py.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td><code>main()</code><br><small style="color:var(--muted)">main.py</small></td>
+  <td><code>add_plugin_file()</code><br><small style="color:var(--muted)">plugin_manager.py</small><br><code>create_plugin()</code><br><small style="color:var(--muted)">plugin_manager.py</small><br><code>get_available_plugin_names()</code><br><small style="color:var(--muted)">plugin_manager.py</small><br>+2 more</td>
+  <td>Module file in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>VST3Wrapper</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>create_plugin()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>VST3Wrapper node in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>.scan_plugins()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><code>add_plugin_file()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>Starts scanning or handles scan status.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>.get_available_plugin_names()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.get_available_plugin_names() node in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>.create_plugin()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small><br><code>VST3Wrapper</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.create_plugin() node in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>.get_plugin_dir()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.get_plugin_dir() node in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>.add_plugin_file()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>plugin_manager.py</code><br><small style="color:var(--muted)">plugin_manager.py</small><br><code>scan_plugins()</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.add_plugin_file() node in plugin_manager.py.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>Pedalboard ile VST3 dosyalarını bizim DSP zincirine uyarlayan sarmalayıcı sınıf.</code><br><small style="color:var(--muted)">plugin_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Pedalboard ile VST3 dosyalarını bizim DSP zincirine uyarlayan sarmalayıcı sınıf..</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>BiquadFilter</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>set_bandpass()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_highshelf()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_lowshelf()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br>+1 more</td>
+  <td>BiquadFilter node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>.set_lowshelf()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BiquadFilter</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><code>_update_all()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_low()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>.set_lowshelf() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>.set_highshelf()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BiquadFilter</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><code>_update_all()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_high()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>.set_highshelf() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>.set_peaking()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BiquadFilter</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><code>_update_all()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>_update_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_mid()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>.set_peaking() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>.set_bandpass()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BiquadFilter</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_bandpass() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>DistortionEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_update_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_drive()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_level()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br>+1 more</td>
+  <td>DistortionEffect node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td><code>._update_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DistortionEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_peaking()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><code>set_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>._update_tone() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td><code>.set_drive()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DistortionEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_drive() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>.set_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_update_tone()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>DistortionEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_tone() node in dsp_chain.py.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>dsp_chain.py</code></td><td>18 nodes</td></tr>
+<tr><td><code>audio_engine.py</code></td><td>11 nodes</td></tr>
+<tr><td><code>plugin_manager.py</code></td><td>8 nodes</td></tr>
+<tr><td><code>dsp_core/analyzer.py</code></td><td>6 nodes</td></tr>
+<tr><td><code>main.py</code></td><td>2 nodes</td></tr>
+<tr><td><code>gui/assistant_panel.py</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: method x26, calls x12, contains x8, explains x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 5. Serving API ====== -->
+<h2 id="serve-api">5. Serving API</h2>
+<p>Serving API groups implementation around web, serverpy, static, upload, mostly in web_server.py. This section covers 9 nodes and 10 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Serving API (9 nodes, 10 edges)
+    baglamadsp_web_server_broadcast_vitals_7b0c83f3("broadcast_vitals()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_main_ws_08921811("main_ws()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_run_ws_08204dfe("run_ws()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_handler_849be25f("handler()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_index_cd2fdef6("index()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_static_files_27439c47("static_files()<br/><small>web_server.py</small>")
+    baglamadsp_web_server_upload_df1f4206("upload()<br/><small>web_server.py</small>")
+    web_server_py_1f324a6a("web_server.py")
+    baglamadsp_web_server_rationale_1_20bb6d86("web_server.py — Flask static serve + as...<br/><small>web_server.py</small>")
+    baglamadsp_web_server_broadcast_vitals_7b0c83f3 -->|calls| baglamadsp_web_server_main_ws_08921811
+    baglamadsp_web_server_main_ws_08921811 -->|calls| baglamadsp_web_server_run_ws_08204dfe
+    class baglamadsp_web_server_broadcast_vitals_7b0c83f3 function;
+    class baglamadsp_web_server_main_ws_08921811 function;
+    class baglamadsp_web_server_run_ws_08204dfe function;
+    class baglamadsp_web_server_handler_849be25f function;
+    class baglamadsp_web_server_index_cd2fdef6 function;
+    class baglamadsp_web_server_static_files_27439c47 function;
+    class baglamadsp_web_server_upload_df1f4206 function;
+    class web_server_py_1f324a6a module;
+    class baglamadsp_web_server_rationale_1_20bb6d86 concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>web_server.py</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in web_server.py.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>index()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>index() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>upload()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>upload() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>static_files()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>static_files() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>handler()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>handler() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>broadcast_vitals()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>main_ws()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td>broadcast_vitals() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>main_ws()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>broadcast_vitals()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><code>run_ws()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td>main_ws() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>run_ws()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>main_ws()</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>run_ws() node in web_server.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>web_server.py — Flask static serve + asyncio WebSocket köprüsü BaglamaDSP web G</code><br><small style="color:var(--muted)">web_server.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for web_server.py — Flask static serve + asyncio WebSocket köprüsü BaglamaDSP web G.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>web_server.py</code></td><td>9 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x7, calls x2, explains x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 6. Tests & Fixtures ====== -->
+<h2 id="tests-fixtures">6. Tests &amp; Fixtures</h2>
+<p>Tests &amp; Fixtures groups implementation around testpy, mostly in test.py. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Tests &amp; Fixtures (1 nodes, 0 edges)
+    test_py_b03058c6("test.py")
+    class test_py_b03058c6 test;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>test.py</code><br><small style="color:var(--muted)">test.py</small></td>
+  <td><span class="tag tag-func">Test</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in test.py.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>test.py</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: No high-confidence call edges detected. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 7. Dsp Kernelspy Pluginpy ====== -->
+<h2 id="dsp-kernelspy-pluginpy">7. Dsp Kernelspy Pluginpy</h2>
+<p>Dsp Kernelspy Pluginpy groups implementation around dsp, kernelspy, pluginpy, plugins, mostly in dsp_kernels.py, Plugins/anadolu_psych_plugin.py, Plugins/base_plugin.py. This section covers 27 nodes and 41 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Dsp Kernelspy Pluginpy (27 nodes, 41 edges)
+    subgraph dsp_kernelspy_pluginpy_dsp_kernels_py_ae96552d["dsp_kernels.py"]
+        baglamadsp_dsp_kernels_delay_kernel_b0fcf106("delay_kernel()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_flanger_kernel_d1e5cb2b("flanger_kernel()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_phaser_kernel_059a1d78("phaser_kernel()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_reverb_kernel_0ab45033("reverb_kernel()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_tremolo_kernel_96b40de2("tremolo_kernel()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_warmup_all_00514223("warmup_all()<br/><small>dsp_kernels.py</small>")
+        baglamadsp_dsp_kernels_wah_kernel_9784002d("wah_kernel()<br/><small>dsp_kernels.py</small>")
+        dsp_kernels_py_0a842c99("dsp_kernels.py")
+        baglamadsp_dsp_kernels_njit_47982120("njit()<br/><small>dsp_kernels.py</small>")
+    end
+    subgraph dsp_kernelspy_pluginpy_Plugins_anadolu_psych_plu_c25a1cd3["Plugins/anadolu_psych_plugin.py"]
+        plugins_anadolu_psych_plugin_py_5264f605("anadolu_psych_plugin.py")
+        plugins_anadolu_psych_plugin_tape_sat_a028185c("_tape_sat()<br/><small>Plugins/anadolu_psych_plugin.py</small>")
+        plugins_anadolu_psych_plugin_fuzz_47bffe26("_fuzz()<br/><small>Plugins/anadolu_psych_plugin.py</small>")
+    end
+    subgraph dsp_kernelspy_pluginpy_Plugins_base_plugin_py_26b55f93["Plugins/base_plugin.py"]
+        plugins_base_plugin_process_e14c3c88("process()<br/><small>Plugins/base_plugin.py</small>")
+        plugins_base_plugin_baseplugin_get_parameter_f27234b7("get_parameter()<br/><small>Plugins/base_plugin.py</small>")
+        plugins_base_plugin_baseplugin_set_parameter_8fe22f31("set_parameter()<br/><small>Plugins/base_plugin.py</small>")
+    end
+    subgraph dsp_kernelspy_pluginpy_External_generated_d57a9498["External / generated"]
+        baseplugin_4821899d("BasePlugin")
+        abc_a9993e36("ABC")
+    end
+    plugins_chorus_plugin_py_3fd6cce2("chorus_plugin.py")
+    baglamadsp_dsp_kernels_delay_kernel_b0fcf106 -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    baglamadsp_dsp_kernels_reverb_kernel_0ab45033 -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    baglamadsp_dsp_kernels_wah_kernel_9784002d -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    baglamadsp_dsp_kernels_phaser_kernel_059a1d78 -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    baglamadsp_dsp_kernels_flanger_kernel_d1e5cb2b -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    baglamadsp_dsp_kernels_tremolo_kernel_96b40de2 -->|calls| baglamadsp_dsp_kernels_warmup_all_00514223
+    plugins_anadolu_psych_plugin_py_5264f605 -->|method| plugins_base_plugin_process_e14c3c88
+    baseplugin_4821899d -->|method| plugins_base_plugin_baseplugin_get_parameter_f27234b7
+    baseplugin_4821899d -->|method| plugins_base_plugin_baseplugin_set_parameter_8fe22f31
+    plugins_anadolu_psych_plugin_tape_sat_a028185c -->|calls| plugins_base_plugin_process_e14c3c88
+    plugins_anadolu_psych_plugin_fuzz_47bffe26 -->|calls| plugins_base_plugin_process_e14c3c88
+    plugins_base_plugin_process_e14c3c88 -->|method| plugins_chorus_plugin_py_3fd6cce2
+    %% Omitted for readability: 9 nodes, 0 edges
+    class baglamadsp_dsp_kernels_delay_kernel_b0fcf106 function;
+    class baglamadsp_dsp_kernels_flanger_kernel_d1e5cb2b function;
+    class baglamadsp_dsp_kernels_phaser_kernel_059a1d78 function;
+    class baglamadsp_dsp_kernels_reverb_kernel_0ab45033 function;
+    class baglamadsp_dsp_kernels_tremolo_kernel_96b40de2 function;
+    class baglamadsp_dsp_kernels_warmup_all_00514223 function;
+    class baglamadsp_dsp_kernels_wah_kernel_9784002d function;
+    class dsp_kernels_py_0a842c99 module;
+    class baglamadsp_dsp_kernels_njit_47982120 function;
+    class plugins_anadolu_psych_plugin_py_5264f605 module;
+    class plugins_anadolu_psych_plugin_tape_sat_a028185c function;
+    class plugins_anadolu_psych_plugin_fuzz_47bffe26 function;
+    class plugins_base_plugin_process_e14c3c88 function;
+    class plugins_base_plugin_baseplugin_get_parameter_f27234b7 function;
+    class plugins_base_plugin_baseplugin_set_parameter_8fe22f31 function;
+    class baseplugin_4821899d klass;
+    class abc_a9993e36 klass;
+    class plugins_chorus_plugin_py_3fd6cce2 module;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>(dry, wet) döndürür — her ikisi de float32 numpy dizisi.</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for (dry, wet) döndürür — her ikisi de float32 numpy dizisi..</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>dsp_kernels.py</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>njit()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>njit() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>delay_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>delay_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>reverb_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>reverb_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>wah_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>wah_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>phaser_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>phaser_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>flanger_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>flanger_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>tremolo_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td>tremolo_kernel() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>warmup_all()</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>delay_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small><br><code>flanger_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small><br><code>phaser_kernel()</code><br><small style="color:var(--muted)">dsp_kernels.py</small><br>+3 more</td>
+  <td>No direct outbound edge</td>
+  <td>warmup_all() node in dsp_kernels.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>dsp_kernels.py — Numba JIT ile derlenmiş DSP çekirdekleri ======================</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for dsp_kernels.py — Numba JIT ile derlenmiş DSP çekirdekleri ======================.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>Geri beslemeli gecikme hattı.     Hem Delay hem Echo efektleri bu çekirdeği kull</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Geri beslemeli gecikme hattı.     Hem Delay hem Echo efektleri bu çekirdeği kull.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>Per-sample LFO + bandpass biquad hesabı.     Biquad: DF2T (Direct Form II Transp</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Per-sample LFO + bandpass biquad hesabı.     Biquad: DF2T (Direct Form II Transp.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>N-aşamalı birinci-derece all-pass phaser.     Katsayı: a = (tan(π*f/sr) - 1) / (</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for N-aşamalı birinci-derece all-pass phaser.     Katsayı: a = (tan(π*f/sr) - 1) / (.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>Doğrusal enterpolasyonlu flanger.     Gecikme: 1–9 ms (LFO modülasyonu).      Dö</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Doğrusal enterpolasyonlu flanger.     Gecikme: 1–9 ms (LFO modülasyonu).      Dö.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>LFO amplitüd modülasyonu.     Döndürür: (out, phase_new)</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for LFO amplitüd modülasyonu.     Döndürür: (out, phase_new).</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>Tüm kernel&#x27;ları küçük bir kukla veriyle bir kez çağır.     DSPChain.__init__ son</code><br><small style="color:var(--muted)">dsp_kernels.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Tüm kernel&#x27;ları küçük bir kukla veriyle bir kez çağır.     DSPChain.__init__ son.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>anadolu_psych_plugin.py</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>BasePlugin</code><br><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td>Module file in Plugins/anadolu_psych_plugin.py.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>BasePlugin</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>anadolu_psych_plugin.py</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small></td>
+  <td><code>chorus_plugin.py</code><br><small style="color:var(--muted)">Plugins/chorus_plugin.py</small><br><code>get_parameter()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small><br><code>set_parameter()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td>BasePlugin node in project.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>_tape_sat()</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td>_tape_sat() node in Plugins/anadolu_psych_plugin.py.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>_fuzz()</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td>_fuzz() node in Plugins/anadolu_psych_plugin.py.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>AnadoluPsychPlugin v2 — Numba JIT ile optimize edilmiş =========================</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for AnadoluPsychPlugin v2 — Numba JIT ile optimize edilmiş =========================.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>ABC</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>ABC node in project.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>_fuzz()</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small><br><code>_tape_sat()</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small><br><code>anadolu_psych_plugin.py</code><br><small style="color:var(--muted)">Plugins/anadolu_psych_plugin.py</small><br>+6 more</td>
+  <td><code>chorus_plugin.py</code><br><small style="color:var(--muted)">Plugins/chorus_plugin.py</small></td>
+  <td>process() node in Plugins/base_plugin.py.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>.set_parameter()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BasePlugin</code></td>
+  <td>No direct outbound edge</td>
+  <td>.set_parameter() node in Plugins/base_plugin.py.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>.get_parameter()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BasePlugin</code></td>
+  <td>No direct outbound edge</td>
+  <td>.get_parameter() node in Plugins/base_plugin.py.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>chorus_plugin.py</code><br><small style="color:var(--muted)">Plugins/chorus_plugin.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td><code>BasePlugin</code><br><code>process()</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>Module file in Plugins/chorus_plugin.py.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>dsp_kernels.py</code></td><td>16 nodes</td></tr>
+<tr><td><code>Plugins/anadolu_psych_plugin.py</code></td><td>4 nodes</td></tr>
+<tr><td><code>Plugins/base_plugin.py</code></td><td>3 nodes</td></tr>
+<tr><td><code>Plugins/chorus_plugin.py</code></td><td>1 nodes</td></tr>
+<tr><td><code>dsp_chain.py</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x11, explains x9, calls x8, method x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 8. Iconsjsx Icon Iconplay ====== -->
+<h2 id="iconsjsx-icon-iconplay">8. Iconsjsx Icon Iconplay</h2>
+<p>Iconsjsx Icon Iconplay groups implementation around iconsjsx, icon, iconplay, iconstop, mostly in icons.jsx. This section covers 23 nodes and 22 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Iconsjsx Icon Iconplay (23 nodes, 22 edges)
+    icons_jsx_cc11347e("icons.jsx")
+    baglamadsp_icons_icon_d180b95f("Icon()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconplay_44b99b8a("IconPlay()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconstop_1b5c08cb("IconStop()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconrecord_fa37d766("IconRecord()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_icondisk_825460cd("IconDisk()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconpower_aa6ec6ae("IconPower()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconchip_21498e0a("IconChip()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconwave_6bf99446("IconWave()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconspectrum_6d537570("IconSpectrum()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconmic_e97b28e9("IconMic()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconmusic_2ebfb3ae("IconMusic()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconfolder_4c492fd4("IconFolder()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconlayers_23aa48f1("IconLayers()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconbolt_fbb6b338("IconBolt()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconfreeze_88ca413d("IconFreeze()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconcheck_7bbace3f("IconCheck()<br/><small>icons.jsx</small>")
+    baglamadsp_icons_iconclose_ab8b9d1c("IconClose()<br/><small>icons.jsx</small>")
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_icon_d180b95f
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconplay_44b99b8a
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconstop_1b5c08cb
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconrecord_fa37d766
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_icondisk_825460cd
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconpower_aa6ec6ae
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconchip_21498e0a
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconwave_6bf99446
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconspectrum_6d537570
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconmic_e97b28e9
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconmusic_2ebfb3ae
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconfolder_4c492fd4
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconlayers_23aa48f1
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconbolt_fbb6b338
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconfreeze_88ca413d
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconcheck_7bbace3f
+    icons_jsx_cc11347e -->|contains| baglamadsp_icons_iconclose_ab8b9d1c
+    %% Omitted for readability: 5 nodes, 0 edges
+    class icons_jsx_cc11347e ui;
+    class baglamadsp_icons_icon_d180b95f ui;
+    class baglamadsp_icons_iconplay_44b99b8a ui;
+    class baglamadsp_icons_iconstop_1b5c08cb ui;
+    class baglamadsp_icons_iconrecord_fa37d766 ui;
+    class baglamadsp_icons_icondisk_825460cd ui;
+    class baglamadsp_icons_iconpower_aa6ec6ae ui;
+    class baglamadsp_icons_iconchip_21498e0a ui;
+    class baglamadsp_icons_iconwave_6bf99446 ui;
+    class baglamadsp_icons_iconspectrum_6d537570 ui;
+    class baglamadsp_icons_iconmic_e97b28e9 ui;
+    class baglamadsp_icons_iconmusic_2ebfb3ae ui;
+    class baglamadsp_icons_iconfolder_4c492fd4 ui;
+    class baglamadsp_icons_iconlayers_23aa48f1 ui;
+    class baglamadsp_icons_iconbolt_fbb6b338 ui;
+    class baglamadsp_icons_iconfreeze_88ca413d ui;
+    class baglamadsp_icons_iconcheck_7bbace3f ui;
+    class baglamadsp_icons_iconclose_ab8b9d1c ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>icons.jsx</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>icons.jsx node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>Icon()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Icon() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>IconPlay()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconPlay() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>IconStop()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconStop() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>IconRecord()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconRecord() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>IconDisk()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconDisk() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>IconPower()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconPower() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>IconChip()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconChip() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>IconWave()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconWave() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>IconSpectrum()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconSpectrum() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>IconMic()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconMic() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>IconMusic()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconMusic() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>IconFolder()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconFolder() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>IconLayers()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconLayers() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>IconBolt()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconBolt() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>IconFreeze()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconFreeze() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>IconCheck()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconCheck() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>IconClose()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconClose() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>IconWarn()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconWarn() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>IconSparkle()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconSparkle() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>IconRefresh()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconRefresh() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>IconUpload()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconUpload() node in icons.jsx.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>IconScissor()</code><br><small style="color:var(--muted)">icons.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IconScissor() node in icons.jsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>icons.jsx</code></td><td>23 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x22. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 9. Dsp Chainpy Set ====== -->
+<h2 id="dsp-chainpy-set">9. Dsp Chainpy Set</h2>
+<p>Dsp Chainpy Set groups implementation around dsp, chainpy, set, plugin, mostly in dsp_chain.py. This section covers 21 nodes and 24 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Dsp Chainpy Set (21 nodes, 24 edges)
+    baglamadsp_dsp_chain_delayeffect_361ca888("DelayEffect<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_echoeffect_a3f9efc0("EchoEffect<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_reverbeffect_12134c46("ReverbEffect<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_wahwaheffect_1d2de6e9("WahWahEffect<br/><small>dsp_chain.py</small>")
+    dsp_chain_py_06eb4350("dsp_chain.py")
+    baglamadsp_dsp_chain_dspchain_add_plugin_a2ea2879("add_plugin()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_dspchain_remove_plugin_d42d89b7("remove_plugin()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_dspchain_get_plugins_60e57dad("get_plugins()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_echoeffect_set_delay_ms_ed6f2a68("set_delay_ms()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_echoeffect_set_feedback_fb42cba6("set_feedback()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_echoeffect_set_mix_7f606bd3("set_mix()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_reverbeffect_set_room_size_b018d2aa("set_room_size()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_reverbeffect_set_damping_538bbf6d("set_damping()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_wahwaheffect_set_rate_fbfdb5f4("set_rate()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_wahwaheffect_set_depth_fd0b867a("set_depth()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_wahwaheffect_set_q_fee2c010("set_q()<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_noisegate_f3fce525("NoiseGate<br/><small>dsp_chain.py</small>")
+    baglamadsp_dsp_chain_rationale_217_3dcceae3("LFO-modülasyonlu bant-geçiren wah. Biqu...<br/><small>dsp_chain.py</small>")
+    dsp_chain_py_06eb4350 -->|method| baglamadsp_dsp_chain_dspchain_add_plugin_a2ea2879
+    dsp_chain_py_06eb4350 -->|method| baglamadsp_dsp_chain_dspchain_remove_plugin_d42d89b7
+    dsp_chain_py_06eb4350 -->|method| baglamadsp_dsp_chain_dspchain_get_plugins_60e57dad
+    baglamadsp_dsp_chain_delayeffect_361ca888 -->|method| baglamadsp_dsp_chain_echoeffect_set_delay_ms_ed6f2a68
+    baglamadsp_dsp_chain_delayeffect_361ca888 -->|method| baglamadsp_dsp_chain_echoeffect_set_feedback_fb42cba6
+    baglamadsp_dsp_chain_delayeffect_361ca888 -->|method| baglamadsp_dsp_chain_echoeffect_set_mix_7f606bd3
+    baglamadsp_dsp_chain_reverbeffect_12134c46 -->|method| baglamadsp_dsp_chain_reverbeffect_set_room_size_b018d2aa
+    baglamadsp_dsp_chain_reverbeffect_12134c46 -->|method| baglamadsp_dsp_chain_reverbeffect_set_damping_538bbf6d
+    baglamadsp_dsp_chain_reverbeffect_12134c46 -->|method| baglamadsp_dsp_chain_echoeffect_set_mix_7f606bd3
+    baglamadsp_dsp_chain_wahwaheffect_1d2de6e9 -->|method| baglamadsp_dsp_chain_wahwaheffect_set_rate_fbfdb5f4
+    baglamadsp_dsp_chain_wahwaheffect_1d2de6e9 -->|method| baglamadsp_dsp_chain_wahwaheffect_set_depth_fd0b867a
+    baglamadsp_dsp_chain_wahwaheffect_1d2de6e9 -->|method| baglamadsp_dsp_chain_wahwaheffect_set_q_fee2c010
+    baglamadsp_dsp_chain_echoeffect_a3f9efc0 -->|method| baglamadsp_dsp_chain_echoeffect_set_delay_ms_ed6f2a68
+    baglamadsp_dsp_chain_echoeffect_a3f9efc0 -->|method| baglamadsp_dsp_chain_echoeffect_set_feedback_fb42cba6
+    baglamadsp_dsp_chain_echoeffect_a3f9efc0 -->|method| baglamadsp_dsp_chain_echoeffect_set_mix_7f606bd3
+    %% Omitted for readability: 3 nodes, 0 edges
+    class baglamadsp_dsp_chain_delayeffect_361ca888 klass;
+    class baglamadsp_dsp_chain_echoeffect_a3f9efc0 klass;
+    class baglamadsp_dsp_chain_reverbeffect_12134c46 klass;
+    class baglamadsp_dsp_chain_wahwaheffect_1d2de6e9 klass;
+    class dsp_chain_py_06eb4350 module;
+    class baglamadsp_dsp_chain_dspchain_add_plugin_a2ea2879 function;
+    class baglamadsp_dsp_chain_dspchain_remove_plugin_d42d89b7 function;
+    class baglamadsp_dsp_chain_dspchain_get_plugins_60e57dad function;
+    class baglamadsp_dsp_chain_echoeffect_set_delay_ms_ed6f2a68 function;
+    class baglamadsp_dsp_chain_echoeffect_set_feedback_fb42cba6 function;
+    class baglamadsp_dsp_chain_echoeffect_set_mix_7f606bd3 function;
+    class baglamadsp_dsp_chain_reverbeffect_set_room_size_b018d2aa function;
+    class baglamadsp_dsp_chain_reverbeffect_set_damping_538bbf6d function;
+    class baglamadsp_dsp_chain_wahwaheffect_set_rate_fbfdb5f4 function;
+    class baglamadsp_dsp_chain_wahwaheffect_set_depth_fd0b867a function;
+    class baglamadsp_dsp_chain_wahwaheffect_set_q_fee2c010 function;
+    class baglamadsp_dsp_chain_noisegate_f3fce525 klass;
+    class baglamadsp_dsp_chain_rationale_217_3dcceae3 concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>dsp_chain.py</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>add_plugin()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>get_plugins()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>remove_plugin()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>Module file in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>DelayEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>set_delay_ms()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_feedback()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_mix()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>DelayEffect node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>ReverbEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>set_damping()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_mix()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_room_size()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>ReverbEffect node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>.set_room_size()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ReverbEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_room_size() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>.set_damping()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ReverbEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_damping() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>WahWahEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>set_depth()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_q()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_rate()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>WahWahEffect node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>.set_rate()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>WahWahEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_rate() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>.set_depth()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>WahWahEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_depth() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>.set_q()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>WahWahEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_q() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>EchoEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>set_delay_ms()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_feedback()</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>set_mix()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>EchoEffect node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>.set_delay_ms()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DelayEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>EchoEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_delay_ms() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>.set_feedback()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DelayEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>EchoEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_feedback() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>.set_mix()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>DelayEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>EchoEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small><br><code>ReverbEffect</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.set_mix() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>NoiseGate</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>NoiseGate node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>.add_plugin()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>dsp_chain.py</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.add_plugin() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>.remove_plugin()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>dsp_chain.py</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.remove_plugin() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>.get_plugins()</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>dsp_chain.py</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.get_plugins() node in dsp_chain.py.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>dsp_chain.py — Numba JIT ile optimize edilmiş DSP zinciri ======================</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for dsp_chain.py — Numba JIT ile optimize edilmiş DSP zinciri ======================.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>Schroeder reverb: paralel komb → seri all-pass.</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Schroeder reverb: paralel komb → seri all-pass..</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>LFO-modülasyonlu bant-geçiren wah. Biquad state doğrudan float.</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for LFO-modülasyonlu bant-geçiren wah. Biquad state doğrudan float..</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>Master işlem zinciri. Thread-safe.</code><br><small style="color:var(--muted)">dsp_chain.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Master işlem zinciri. Thread-safe..</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>dsp_chain.py</code></td><td>21 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: method x15, contains x5, explains x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 10. Preset Dsp Managerpy ====== -->
+<h2 id="preset-dsp-managerpy">10. Preset Dsp Managerpy</h2>
+<p>Preset Dsp Managerpy groups implementation around preset, dsp, managerpy, parametrelerini, mostly in dsp_core/preset_manager.py. This section covers 21 nodes and 30 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Preset Dsp Managerpy (21 nodes, 30 edges)
+    dsp_core_preset_manager_presetmanager_a4312898("PresetManager<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_load_0321dfbb("load()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_save_fd302ca0("save()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_delete_a4333b8a("delete()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_list_prese_97a09c9f("list_presets()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_exists_0129d76d("exists()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_capture_bu_9ae5478a("_capture_builtin()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_restore_bu_85fc11a2("_restore_builtin()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_capture_pl_e189e7a4("_capture_plugins()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_restore_pl_ed69038a("_restore_plugins()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_path_for_d59110dd("_path_for()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_get_presets_dir_7faac85e("get_presets_dir()<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_py_0aaa1019("preset_manager.py")
+    dsp_core_preset_manager_rationale_239_ef4747da("Aktif zincirdeki her VST3'ün adını ve p...<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_rationale_31_d44e684e("DSP zinciri + VST3 parametrelerini JSON...<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_rationale_261_6ff57a94("Kaydedilen plugin listesini zincire yen...<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_rationale_47_9e31f431("Mevcut DSP durumunu preset olarak kayde...<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_rationale_107_5e8f283c("Mevcut preset'leri listeler. Returns: [...<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_save_fd302ca0
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_load_0321dfbb
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_list_prese_97a09c9f
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_delete_a4333b8a
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_exists_0129d76d
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_capture_bu_9ae5478a
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_restore_bu_85fc11a2
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_capture_pl_e189e7a4
+    dsp_core_preset_manager_presetmanager_a4312898 -->|method| dsp_core_preset_manager_presetmanager_restore_pl_ed69038a
+    dsp_core_preset_manager_presetmanager_save_fd302ca0 -->|calls| dsp_core_preset_manager_presetmanager_capture_bu_9ae5478a
+    dsp_core_preset_manager_presetmanager_save_fd302ca0 -->|calls| dsp_core_preset_manager_presetmanager_capture_pl_e189e7a4
+    dsp_core_preset_manager_presetmanager_save_fd302ca0 -->|calls| dsp_core_preset_manager_path_for_d59110dd
+    dsp_core_preset_manager_presetmanager_load_0321dfbb -->|calls| dsp_core_preset_manager_path_for_d59110dd
+    dsp_core_preset_manager_presetmanager_load_0321dfbb -->|calls| dsp_core_preset_manager_presetmanager_exists_0129d76d
+    dsp_core_preset_manager_presetmanager_load_0321dfbb -->|calls| dsp_core_preset_manager_presetmanager_restore_bu_85fc11a2
+    dsp_core_preset_manager_presetmanager_load_0321dfbb -->|calls| dsp_core_preset_manager_presetmanager_restore_pl_ed69038a
+    dsp_core_preset_manager_presetmanager_delete_a4333b8a -->|calls| dsp_core_preset_manager_path_for_d59110dd
+    dsp_core_preset_manager_presetmanager_delete_a4333b8a -->|calls| dsp_core_preset_manager_presetmanager_exists_0129d76d
+    dsp_core_preset_manager_presetmanager_exists_0129d76d -->|calls| dsp_core_preset_manager_path_for_d59110dd
+    %% Omitted for readability: 3 nodes, 0 edges
+    class dsp_core_preset_manager_presetmanager_a4312898 klass;
+    class dsp_core_preset_manager_presetmanager_load_0321dfbb function;
+    class dsp_core_preset_manager_presetmanager_save_fd302ca0 function;
+    class dsp_core_preset_manager_presetmanager_delete_a4333b8a function;
+    class dsp_core_preset_manager_presetmanager_list_prese_97a09c9f function;
+    class dsp_core_preset_manager_presetmanager_exists_0129d76d function;
+    class dsp_core_preset_manager_presetmanager_capture_bu_9ae5478a function;
+    class dsp_core_preset_manager_presetmanager_restore_bu_85fc11a2 ui;
+    class dsp_core_preset_manager_presetmanager_capture_pl_e189e7a4 function;
+    class dsp_core_preset_manager_presetmanager_restore_pl_ed69038a ui;
+    class dsp_core_preset_manager_path_for_d59110dd function;
+    class dsp_core_preset_manager_get_presets_dir_7faac85e function;
+    class dsp_core_preset_manager_py_0aaa1019 module;
+    class dsp_core_preset_manager_rationale_239_ef4747da concept;
+    class dsp_core_preset_manager_rationale_31_d44e684e concept;
+    class dsp_core_preset_manager_rationale_261_6ff57a94 concept;
+    class dsp_core_preset_manager_rationale_47_9e31f431 concept;
+    class dsp_core_preset_manager_rationale_107_5e8f283c concept;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>preset_manager.py</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>_capture_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_capture_plugins()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_restore_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br>+6 more</td>
+  <td>PresetManager node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>.save()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><code>_capture_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_capture_plugins()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_path_for()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>.save() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>.load()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><code>_path_for()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_restore_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>_restore_plugins()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br>+1 more</td>
+  <td>.load() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>.list_presets()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>.list_presets() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>.delete()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><code>_path_for()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>exists()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>.delete() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>.exists()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>delete()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>load()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><code>_path_for()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>.exists() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>._capture_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>save()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._capture_builtin() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>._restore_builtin()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>load()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._restore_builtin() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>._capture_plugins()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>save()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._capture_plugins() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>._restore_plugins()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>load()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>PresetManager</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td>No direct outbound edge</td>
+  <td>._restore_plugins() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>_path_for()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>delete()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>exists()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br><code>load()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small><br>+1 more</td>
+  <td>No direct outbound edge</td>
+  <td>_path_for() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>get_presets_dir()</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>get_presets_dir() node in dsp_core/preset_manager.py.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>dsp_core/preset_manager.py — Preset Kaydetme / Yükleme =========================</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for dsp_core/preset_manager.py — Preset Kaydetme / Yükleme =========================.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>DSP zinciri + VST3 parametrelerini JSON preset&#x27;e kaydeder ve yükler.      Args:</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for DSP zinciri + VST3 parametrelerini JSON preset&#x27;e kaydeder ve yükler.      Args:.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>Mevcut DSP durumunu preset olarak kaydeder.         Aynı isimde preset varsa üze</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Mevcut DSP durumunu preset olarak kaydeder.         Aynı isimde preset varsa üze.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>Preset&#x27;i yükler ve DSP zincirini günceller.          Returns:             Yüklen</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Preset&#x27;i yükler ve DSP zincirini günceller.          Returns:             Yüklen.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>Mevcut preset&#x27;leri listeler.          Returns:             [{&quot;name&quot;: str, &quot;mode&quot;</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Mevcut preset&#x27;leri listeler.          Returns:             [{&quot;name&quot;: str, &quot;mode&quot;.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>Preset dosyasını siler. Başarılıysa True döner.</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Preset dosyasını siler. Başarılıysa True döner..</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>Aktif zincirdeki her VST3&#x27;ün adını ve pedalboard parametrelerini yakalar.</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Aktif zincirdeki her VST3&#x27;ün adını ve pedalboard parametrelerini yakalar..</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>Kaydedilen plugin listesini zincire yeniden ekler ve parametrelerini set eder.</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Kaydedilen plugin listesini zincire yeniden ekler ve parametrelerini set eder..</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>dsp_core/preset_manager.py</code></td><td>21 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: calls x10, method x9, explains x8, contains x3. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 11. Appjsx Usetoasts Toasts ====== -->
+<h2 id="appjsx-usetoasts-toasts">11. Appjsx Usetoasts Toasts</h2>
+<p>Appjsx Usetoasts Toasts groups implementation around appjsx, usetoasts, toasts, sidebar, mostly in app.jsx. This section covers 7 nodes and 7 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Appjsx Usetoasts Toasts (7 nodes, 7 edges)
+    baglamadsp_app_usetoasts_89d53671("useToasts()<br/><small>app.jsx</small>")
+    baglamadsp_app_app_3b392e50("App()<br/><small>app.jsx</small>")
+    baglamadsp_app_sidebar_906e23e4("Sidebar()<br/><small>app.jsx</small>")
+    baglamadsp_app_toasts_e6d88730("Toasts()<br/><small>app.jsx</small>")
+    baglamadsp_app_transportbar_1d3ff9cc("TransportBar()<br/><small>app.jsx</small>")
+    app_jsx_9fec5460("app.jsx")
+    baglamadsp_app_root_c77bbcc3("root<br/><small>app.jsx</small>")
+    baglamadsp_app_usetoasts_89d53671 -->|calls| baglamadsp_app_app_3b392e50
+    class baglamadsp_app_usetoasts_89d53671 ui;
+    class baglamadsp_app_app_3b392e50 ui;
+    class baglamadsp_app_sidebar_906e23e4 ui;
+    class baglamadsp_app_toasts_e6d88730 ui;
+    class baglamadsp_app_transportbar_1d3ff9cc ui;
+    class app_jsx_9fec5460 ui;
+    class baglamadsp_app_root_c77bbcc3 ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>app.jsx</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>app.jsx node in app.jsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>useToasts()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>App()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td>useToasts() node in app.jsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>Toasts()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Toasts() node in app.jsx.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>Sidebar()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Organizes documentation pages, navigation, or content lookup.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>TransportBar()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>TransportBar() node in app.jsx.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>App()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td><code>useToasts()</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td>No direct outbound edge</td>
+  <td>App() node in app.jsx.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>root</code><br><small style="color:var(--muted)">app.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>root node in app.jsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>app.jsx</code></td><td>7 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x6, calls x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 12. Effectsjsx Slider Fxcard ====== -->
+<h2 id="effectsjsx-slider-fxcard">12. Effectsjsx Slider Fxcard</h2>
+<p>Effectsjsx Slider Fxcard groups implementation around effectsjsx, slider, fxcard, effectsrow, mostly in effects.jsx. This section covers 4 nodes and 3 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Effectsjsx Slider Fxcard (4 nodes, 3 edges)
+    effects_jsx_50612a45("effects.jsx")
+    baglamadsp_effects_slider_92608f1f("Slider()<br/><small>effects.jsx</small>")
+    baglamadsp_effects_fxcard_f69316dd("FxCard()<br/><small>effects.jsx</small>")
+    baglamadsp_effects_effectsrow_00bd6ae6("EffectsRow()<br/><small>effects.jsx</small>")
+    effects_jsx_50612a45 -->|contains| baglamadsp_effects_slider_92608f1f
+    effects_jsx_50612a45 -->|contains| baglamadsp_effects_fxcard_f69316dd
+    effects_jsx_50612a45 -->|contains| baglamadsp_effects_effectsrow_00bd6ae6
+    class effects_jsx_50612a45 ui;
+    class baglamadsp_effects_slider_92608f1f ui;
+    class baglamadsp_effects_fxcard_f69316dd ui;
+    class baglamadsp_effects_effectsrow_00bd6ae6 ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>effects.jsx</code><br><small style="color:var(--muted)">effects.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>effects.jsx node in effects.jsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>Slider()</code><br><small style="color:var(--muted)">effects.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Slider() node in effects.jsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>FxCard()</code><br><small style="color:var(--muted)">effects.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>FxCard() node in effects.jsx.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>EffectsRow()</code><br><small style="color:var(--muted)">effects.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>EffectsRow() node in effects.jsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>effects.jsx</code></td><td>4 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x3. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 13. Scopesjsx Waveform Spectrum ====== -->
+<h2 id="scopesjsx-waveform-spectrum">13. Scopesjsx Waveform Spectrum</h2>
+<p>Scopesjsx Waveform Spectrum groups implementation around scopesjsx, waveform, spectrum, mostly in scopes.jsx. This section covers 3 nodes and 2 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Scopesjsx Waveform Spectrum (3 nodes, 2 edges)
+    scopes_jsx_d95107e3("scopes.jsx")
+    baglamadsp_scopes_waveform_673e67b6("Waveform()<br/><small>scopes.jsx</small>")
+    baglamadsp_scopes_spectrum_f490765c("Spectrum()<br/><small>scopes.jsx</small>")
+    scopes_jsx_d95107e3 -->|contains| baglamadsp_scopes_waveform_673e67b6
+    scopes_jsx_d95107e3 -->|contains| baglamadsp_scopes_spectrum_f490765c
+    class scopes_jsx_d95107e3 ui;
+    class baglamadsp_scopes_waveform_673e67b6 ui;
+    class baglamadsp_scopes_spectrum_f490765c ui;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>scopes.jsx</code><br><small style="color:var(--muted)">scopes.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>scopes.jsx node in scopes.jsx.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>Waveform()</code><br><small style="color:var(--muted)">scopes.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Waveform() node in scopes.jsx.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>Spectrum()</code><br><small style="color:var(--muted)">scopes.jsx</small></td>
+  <td><span class="tag tag-hook">UI</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Spectrum() node in scopes.jsx.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>scopes.jsx</code></td><td>3 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x2. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 14. Temp Skip Baglamadsp ====== -->
+<h2 id="temp-skip-baglamadsp">14. Temp Skip Baglamadsp</h2>
+<p>Temp Skip Baglamadsp groups implementation around temp, skip, baglamadsp, readmemd, mostly in temp_skip/README.md, temp_skip/requirements.txt. This section covers 2 nodes and 1 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Temp Skip Baglamadsp (2 nodes, 1 edges)
+    temp_skip_main_802951d1("BaglamaDSP<br/><small>temp_skip/README.md</small>")
+    temp_skip_pyqt6_14c11f7a("PyQt6<br/><small>temp_skip/requirements.txt</small>")
+    temp_skip_main_802951d1 -->|implements| temp_skip_pyqt6_14c11f7a
+    class temp_skip_main_802951d1 klass;
+    class temp_skip_pyqt6_14c11f7a klass;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>BaglamaDSP</code><br><small style="color:var(--muted)">temp_skip/README.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>BaglamaDSP node in temp_skip/README.md.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>PyQt6</code><br><small style="color:var(--muted)">temp_skip/requirements.txt</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>PyQt6 node in temp_skip/requirements.txt.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>temp_skip/README.md</code></td><td>1 nodes</td></tr>
+<tr><td><code>temp_skip/requirements.txt</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: implements x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 15. Configpy ====== -->
+<h2 id="configpy">15. Configpy</h2>
+<p>Configpy groups implementation around configpy, mostly in config.py. This section covers 1 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Configpy (1 nodes, 0 edges)
+    config_py_4de81477("config.py")
+    class config_py_4de81477 module;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>config.py</code><br><small style="color:var(--muted)">config.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in config.py.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>config.py</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: No high-confidence call edges detected. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<!-- ====== 16. Other ====== -->
+<h2 id="other">16. Other</h2>
+<p>Other groups implementation around relative, temp, skip, readmeenmd, mostly in relative/temp_skip/README.en.md, dsp_core/preset_manager.py, dsp_core/rule_engine.py. This section covers 19 nodes and 0 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: Other (19 nodes, 0 edges)
+    subgraph other_relative_temp_skip_README_en_md_c0ce80a3["relative/temp_skip/README.en.md"]
+        temp_skip_hardware_configuration_8bf76029("Hardware Configuration<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_plugin_chain_276f0137("Plugin Chain<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_project_structure_82162d68("Proje Yapısı<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_project_2bbef058("Proje: BaglamaDSP<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_reference_from_track_5b23c6c4("Reference from Track<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_transport_8935e3a2("Transport<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_venv_3ae035f7("Virtual Environment<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_baglama_mode_0a911fa6("Baglama Mode<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_dependencies_eebcace8("Bağımlılıklar<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_supported_vst3_plugins_31bcc8a4("Desteklenen VST3 Plugins<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_requirements_bbdf51b7("Gereksinimler<br/><small>relative/temp_skip/README.en.md</small>")
+        temp_skip_usage_ffbd5528("Kullanım<br/><small>relative/temp_skip/README.en.md</small>")
+    end
+    plugins_base_plugin_rationale_18_b02b26e5("Process a float32 buffer in range [-1,...<br/><small>Plugins/base_plugin.py</small>")
+    plugins_kHs_bf1ab70e("kHs Plugin Provider<br/><small>Plugins/liste.txt</small>")
+    dsp_core_preset_manager_rationale_298_bcac3444("Preset adını güvenli dosya adına çevirir.<br/><small>dsp_core/preset_manager.py</small>")
+    dsp_core_rule_engine_rationale_364_15aacbea("İki analiz arasındaki farkı okunabilir...<br/><small>dsp_core/rule_engine.py</small>")
+    gui_init_py_9f3a9741("__init__.py")
+    temp_skip_context_1035d969("CONTEXT: BaglamaDSP<br/><small>relative/temp_skip/CONTEXT.md</small>")
+    %% Omitted for readability: 1 nodes, 0 edges
+    class temp_skip_hardware_configuration_8bf76029 klass;
+    class temp_skip_plugin_chain_276f0137 klass;
+    class temp_skip_project_structure_82162d68 klass;
+    class temp_skip_project_2bbef058 klass;
+    class temp_skip_reference_from_track_5b23c6c4 klass;
+    class temp_skip_transport_8935e3a2 klass;
+    class temp_skip_venv_3ae035f7 klass;
+    class temp_skip_baglama_mode_0a911fa6 concept;
+    class temp_skip_dependencies_eebcace8 concept;
+    class temp_skip_supported_vst3_plugins_31bcc8a4 concept;
+    class temp_skip_requirements_bbdf51b7 concept;
+    class temp_skip_usage_ffbd5528 concept;
+    class plugins_base_plugin_rationale_18_b02b26e5 concept;
+    class plugins_kHs_bf1ab70e function;
+    class dsp_core_preset_manager_rationale_298_bcac3444 concept;
+    class dsp_core_rule_engine_rationale_364_15aacbea concept;
+    class gui_init_py_9f3a9741 module;
+    class temp_skip_context_1035d969 klass;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>Preset adını güvenli dosya adına çevirir.</code><br><small style="color:var(--muted)">dsp_core/preset_manager.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Preset adını güvenli dosya adına çevirir..</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>İki analiz arasındaki farkı okunabilir özet olarak döndürür.</code><br><small style="color:var(--muted)">dsp_core/rule_engine.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for İki analiz arasındaki farkı okunabilir özet olarak döndürür..</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>__init__.py</code><br><small style="color:var(--muted)">gui/__init__.py</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Module file in gui/__init__.py.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>Process a float32 buffer in range [-1, 1]. Return processed buffer.</code><br><small style="color:var(--muted)">Plugins/base_plugin.py</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Design note for Process a float32 buffer in range [-1, 1]. Return processed buffer..</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>kHs Plugin Provider</code><br><small style="color:var(--muted)">Plugins/liste.txt</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>kHs Plugin Provider node in Plugins/liste.txt.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>CONTEXT: BaglamaDSP</code><br><small style="color:var(--muted)">relative/temp_skip/CONTEXT.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>CONTEXT: BaglamaDSP node in relative/temp_skip/CONTEXT.md.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>Proje: BaglamaDSP</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Proje: BaglamaDSP node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>Gereksinimler</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Gereksinimler.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>Virtual Environment</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Virtual Environment node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>Bağımlılıklar</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Bağımlılıklar.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>Proje Yapısı</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Proje Yapısı node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>Kullanım</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Kullanım.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>Transport</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Transport node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>Baglama Mode</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Baglama Mode.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>Plugin Chain</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Plugin Chain node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>Saz Assistant</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Saz Assistant.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>Reference from Track</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Reference from Track node in relative/temp_skip/README.en.md.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>Desteklenen VST3 Plugins</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-func">Concept</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Documentation node describing Desteklenen VST3 Plugins.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>Hardware Configuration</code><br><small style="color:var(--muted)">relative/temp_skip/README.en.md</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Reads, resolves, or persists project configuration.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>relative/temp_skip/README.en.md</code></td><td>13 nodes</td></tr>
+<tr><td><code>Plugins/base_plugin.py</code></td><td>1 nodes</td></tr>
+<tr><td><code>Plugins/liste.txt</code></td><td>1 nodes</td></tr>
+<tr><td><code>dsp_core/preset_manager.py</code></td><td>1 nodes</td></tr>
+<tr><td><code>dsp_core/rule_engine.py</code></td><td>1 nodes</td></tr>
+<tr><td><code>gui/__init__.py</code></td><td>1 nodes</td></tr>
+<tr><td><code>relative/temp_skip/CONTEXT.md</code></td><td>1 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: No high-confidence call edges detected. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<h2 id="stats">Project Statistics</h2>
+
+<div class="grid">
+  <div class="card">
+    <h4>Graph</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><td>Nodes</td><td>277</td></tr>
+      <tr><td>Edges</td><td>439</td></tr>
+      <tr><td>Hyperedges</td><td>0</td></tr>
+      <tr><td>Communities</td><td>36</td></tr>
+      <tr><td>Documented Sections</td><td>15</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Edge Confidence</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><td>EXTRACTED</td><td>385</td></tr>
+      <tr><td>INFERRED</td><td>54</td></tr>
+      <tr><td>AMBIGUOUS</td><td>0</td></tr>
+    </table>
+  </div>
+</div>
+
+<div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
+  <p>BaglamaDSP — Architecture Documentation</p>
+  <p>Generated: 2026-05-15 17:54 UTC · graphify callflow-html</p>
+</div>
+
+</div><!-- .container -->
+
+<script>
+(function () {
+  const mermaidConfig = {
+    startOnLoad: false,
+    theme: 'dark',
+    securityLevel: 'loose',
+    flowchart: { htmlLabels: true, useMaxWidth: true },
+    themeVariables: {
+      primaryColor: '#1e293b',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#38bdf8',
+      secondaryColor: '#0f172a',
+      tertiaryColor: '#334155',
+      lineColor: '#64748b',
+      textColor: '#e2e8f0',
+    }
+  };
+
+  mermaid.initialize(mermaidConfig);
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function enhanceMermaidDiagrams() {
+    document.querySelectorAll('.mermaid').forEach((container) => {
+      if (container.dataset.zoomReady === 'true') return;
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+
+      container.dataset.zoomReady = 'true';
+      container.classList.add('is-enhanced');
+
+      const viewport = document.createElement('div');
+      viewport.className = 'mermaid-viewport';
+      svg.parentNode.insertBefore(viewport, svg);
+      viewport.appendChild(svg);
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'mermaid-toolbar';
+      toolbar.innerHTML = [
+        '<button type="button" data-action="zoom-out" title="Zoom out">-</button>',
+        '<span class="zoom-level" data-role="level">100%</span>',
+        '<button type="button" data-action="zoom-in" title="Zoom in">+</button>',
+        '<button type="button" data-action="fit" title="Fit width">Fit</button>',
+        '<button type="button" data-action="reset" title="Reset view">Reset</button>'
+      ].join('');
+      container.insertBefore(toolbar, viewport);
+
+      const state = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 };
+      const level = toolbar.querySelector('[data-role="level"]');
+
+      function applyTransform() {
+        svg.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+        level.textContent = `${Math.round(state.scale * 100)}%`;
+      }
+
+      function zoomBy(delta) {
+        state.scale = clamp(state.scale + delta, 0.25, 3);
+        applyTransform();
+      }
+
+      function reset() {
+        state.scale = 1;
+        state.x = 0;
+        state.y = 0;
+        applyTransform();
+      }
+
+      function fitWidth() {
+        const rawWidth = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width
+          ? svg.viewBox.baseVal.width
+          : svg.getBoundingClientRect().width / state.scale;
+        if (!rawWidth) {
+          reset();
+          return;
+        }
+        state.scale = clamp((viewport.clientWidth - 48) / rawWidth, 0.25, 1.4);
+        state.x = 0;
+        state.y = 0;
+        applyTransform();
+      }
+
+      toolbar.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        if (action === 'zoom-in') zoomBy(0.15);
+        if (action === 'zoom-out') zoomBy(-0.15);
+        if (action === 'fit') fitWidth();
+        if (action === 'reset') reset();
+      });
+
+      viewport.addEventListener('wheel', (event) => {
+        if (!event.ctrlKey && !event.metaKey) return;
+        event.preventDefault();
+        zoomBy(event.deltaY < 0 ? 0.1 : -0.1);
+      }, { passive: false });
+
+      viewport.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        state.dragging = true;
+        state.startX = event.clientX;
+        state.startY = event.clientY;
+        state.originX = state.x;
+        state.originY = state.y;
+        viewport.classList.add('is-dragging');
+        viewport.setPointerCapture(event.pointerId);
+      });
+
+      viewport.addEventListener('pointermove', (event) => {
+        if (!state.dragging) return;
+        state.x = state.originX + event.clientX - state.startX;
+        state.y = state.originY + event.clientY - state.startY;
+        applyTransform();
+      });
+
+      function endDrag(event) {
+        if (!state.dragging) return;
+        state.dragging = false;
+        viewport.classList.remove('is-dragging');
+        if (viewport.hasPointerCapture(event.pointerId)) {
+          viewport.releasePointerCapture(event.pointerId);
+        }
+      }
+
+      viewport.addEventListener('pointerup', endDrag);
+      viewport.addEventListener('pointercancel', endDrag);
+      applyTransform();
+    });
+  }
+
+  function renderMermaid() {
+    const result = mermaid.run
+      ? mermaid.run({ querySelector: '.mermaid' })
+      : Promise.resolve();
+    Promise.resolve(result)
+      .then(enhanceMermaidDiagrams)
+      .catch((error) => {
+        console.error('Mermaid render failed:', error);
+        enhanceMermaidDiagrams();
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMermaid);
+  } else {
+    renderMermaid();
+  }
+})();
+</script>
+
+</body>
+</html>
