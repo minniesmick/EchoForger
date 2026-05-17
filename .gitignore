@@ -17,7 +17,7 @@ build/
 .venv_fish/
 venv/
 env/
-
+*.db
 # ── Uygulama Verileri (büyük / kişisel) ──────────────────
 voice_files/
 reference_voices/
