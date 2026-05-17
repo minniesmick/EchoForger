@@ -37,7 +37,7 @@ settings.json
 # ── HuggingFace / Ollama Cache ────────────────────────────
 .cache/
 hf_cache/
-
+graphify-out/
 # ── IDE / Editör ──────────────────────────────────────────
 .vscode/
 .idea/

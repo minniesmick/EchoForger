@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Capstone2 — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Capstone2 — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"Capstone2","total_count":359,"children":[{"name":"colab_ui.py","total_count":10,"children":[{"name":"_cuda_available()","total_count":1,"children":[]},{"name":"backend: \"ollama\" | \"gemini\"","total_count":1,"children":[]},{"name":"Gradio arayüzünü başlatır.     share=True → public URL üretir (MacBook'tan erişi","total_count":1,"children":[]},{"name":"launch_gradio()","total_count":1,"children":[]},{"name":"Pipeline: STT → (opsiyonel TTT çevirisi) → TTS      Returns: (transkript, çıktı_","total_count":1,"children":[]},{"name":"process_text()","total_count":1,"children":[]},{"name":"Returns: (transkript metni, durum mesajı)","total_count":1,"children":[]},{"name":"Returns: (çıktı wav yolu, durum mesajı)","total_count":1,"children":[]},{"name":"speech_to_speech()","total_count":1,"children":[]},{"name":"synthesize()","total_count":1,"children":[]}]},{"name":"core","total_count":113,"children":[{"name":"archive_manager.py","total_count":19,"children":[{"name":"_blob_to_vec()","total_count":1,"children":[]},{"name":"_cosine_sim()","total_count":1,"children":[]},{"name":"_embed()","total_count":1,"children":[]},{"name":"_get_conn()","total_count":1,"children":[]},{"name":"_vec_to_blob()","total_count":1,"children":[]},{"name":"Arşiv istatistikleri.","total_count":1,"children":[]},{"name":"delete_by_id()","total_count":1,"children":[]},{"name":"En yeni kayıtları döndürür.","total_count":1,"children":[]},{"name":"get_all()","total_count":1,"children":[]},{"name":"get_by_id()","total_count":1,"children":[]},{"name":"init_db()","total_count":1,"children":[]},{"name":"keyword_search()","total_count":1,"children":[]},{"name":"nomic-embed-text ile Ollama'dan embedding alır.","total_count":1,"children":[]},{"name":"nomic-embed-text ile semantic (vektör) arama.     Embedding yoksa keyword_search","total_count":1,"children":[]},{"name":"semantic_search()","total_count":1,"children":[]},{"name":"SQLite FTS benzeri LIKE araması.","total_count":1,"children":[]},{"name":"stats()","total_count":1,"children":[]},{"name":"Tabloyu oluşturur (zaten varsa dokunmaz).","total_count":1,"children":[]},{"name":"Transkripti kaydeder, embedding oluşturur.     Döndürür: yeni kayıt id'si","total_count":1,"children":[]}]},{"name":"batch_worker.py","total_count":3,"children":[{"name":".cancel()","total_count":1,"children":[]},{"name":"Sinyaller:         started(int, Path)                        → sıra numarası, d","total_count":1,"children":[]},{"name":"Toplu transkripsiyon motoru. Dosya listesini sırayla işler; her adımda UI'a sin","total_count":1,"children":[]}]},{"name":"diarization_worker.py","total_count":2,"children":[{"name":"_fmt()","total_count":1,"children":[]},{"name":"Ses dosyasında konuşmacıları tespit eder,     opsiyonel olarak Whisper ile trans","total_count":1,"children":[]}]},{"name":"environment.py","total_count":24,"children":[{"name":"._colab_path()","total_count":1,"children":[]},{"name":"._local_fallback()","total_count":1,"children":[]},{"name":".ensure_colab_dirs()","total_count":1,"children":[]},{"name":".ensure_drive_mounted()","total_count":1,"children":[]},{"name":".get_api_key()","total_count":1,"children":[]},{"name":".is_colab()","total_count":1,"children":[]},{"name":".is_local()","total_count":1,"children":[]},{"name":".project_root()","total_count":1,"children":[]},{"name":".resolve_path()","total_count":1,"children":[]},{"name":".runtime()","total_count":1,"children":[]},{"name":".runtime_label()","total_count":1,"children":[]},{"name":"_detect()","total_count":1,"children":[]},{"name":"_find_drive_root()","total_count":1,"children":[]},{"name":"API anahtarını şu sırayla arar:             1. Google Colab Secrets (userdata) —","total_count":1,"children":[]},{"name":"Colab'da gerekli GDrive klasörlerini oluşturur.","total_count":1,"children":[]},{"name":"drive_root()","total_count":1,"children":[]},{"name":"GDrive bağlı değilse mount eder.         Sadece Colab'da çağrılmalı.","total_count":1,"children":[]},{"name":"GDrive mount noktasını bulur.","total_count":1,"children":[]},{"name":"instance()","total_count":1,"children":[]},{"name":"Ortam tespiti ve cross-platform path çözümleme.      Tespit sırası:         1. -","total_count":1,"children":[]},{"name":"Proje kökü — LOCAL: repo dizini, COLAB: /content/EchoForge","total_count":1,"children":[]},{"name":"RuntimeEnv","total_count":1,"children":[]},{"name":"settings boşsa platform'a göre makul bir varsayılan döner.","total_count":1,"children":[]},{"name":"settings_manager'dan gelen path key'ini ortama göre çözer.          LOCAL : sett","total_count":1,"children":[]}]},{"name":"file_manager.py","total_count":31,"children":[{"name":"_resolve_output_dir()","total_count":1,"children":[]},{"name":"_srt_time()","total_count":1,"children":[]},{"name":"_vtt_time()","total_count":1,"children":[]},{"name":"copy_to_reference_voices()","total_count":1,"children":[]},{"name":"copy_to_voice_dir()","total_count":1,"children":[]},{"name":"ensure_directories()","total_count":1,"children":[]},{"name":"Gerekli tüm klasörleri oluşturur (zaten varsa dokunmaz).","total_count":1,"children":[]},{"name":"Geriye dönük uyumluluk — output/ kökünü döndürür.","total_count":1,"children":[]},{"name":"get_audio_dir()","total_count":1,"children":[]},{"name":"get_audio_output_path()","total_count":1,"children":[]},{"name":"get_output_dir()","total_count":1,"children":[]},{"name":"get_reference_voices()","total_count":1,"children":[]},{"name":"get_transcript_path()","total_count":1,"children":[]},{"name":"get_transcripts_dir()","total_count":1,"children":[]},{"name":"get_voice_dir()","total_count":1,"children":[]},{"name":"get_voice_files()","total_count":1,"children":[]},{"name":"Kaynağı reference_voices/ klasörüne kopyalar.         Yalnızca .wav dosyaları k","total_count":1,"children":[]},{"name":"Kaynağı voice_files/ klasörüne kopyalar.         Döndürür: kopyalanan dosya Pat","total_count":1,"children":[]},{"name":"Ortama göre output dizinini döner.","total_count":1,"children":[]},{"name":"Proje klasörlerini ve ses dosyalarını yöneten yardımcı sınıf.     Tüm metodlar","total_count":1,"children":[]},{"name":"reference_voices/ klasöründeki .wav dosyalarını döndürür.         Yalnızca WAV","total_count":1,"children":[]},{"name":"Saniyeyi SRT zaman formatına çevirir: HH:MM:SS,mmm","total_count":1,"children":[]},{"name":"save_srt()","total_count":1,"children":[]},{"name":"save_transcript()","total_count":1,"children":[]},{"name":"save_vtt()","total_count":1,"children":[]},{"name":"Segmentleri SRT formatında output/transcripts/ altına kaydeder.          Örnek","total_count":1,"children":[]},{"name":"Segmentleri WebVTT formatında output/transcripts/ altına kaydeder.          Ör","total_count":1,"children":[]},{"name":"Transkripsiyon çıktı dosyası için hazır Path döndürür.","total_count":1,"children":[]},{"name":"Transkripti düz metin olarak output/transcripts/ altına kaydeder.","total_count":1,"children":[]},{"name":"TTS çıktı dosyası için hazır Path döndürür.","total_count":1,"children":[]},{"name":"voice_files/ klasöründeki tüm desteklenen ses dosyalarını döndürür.         Büy","total_count":1,"children":[]}]},{"name":"gemini_client.py","total_count":10,"children":[{"name":"_get_client()","total_count":1,"children":[]},{"name":"Gemini bulut tabanlı olduğu için VRAM yönetimi yok.     Sadece API key doğrular","total_count":1,"children":[]},{"name":"Gemini istemcisini API anahtarıyla yapılandırır.","total_count":1,"children":[]},{"name":"Gemini model listesini döner (sabit liste, API key doğrulaması yapar).      Siny","total_count":1,"children":[]},{"name":"Gemini'den stream ile yanıt alır. ollama_client.generate_stream ile aynı imza.","total_count":1,"children":[]},{"name":"generate_stream()","total_count":1,"children":[]},{"name":"GenerateWorker","total_count":1,"children":[]},{"name":"ModelFetchWorker","total_count":1,"children":[]},{"name":"ModelSwitchWorker","total_count":1,"children":[]},{"name":"ollama_client.GenerateWorker ile birebir aynı sinyal arayüzü.     ttt_panel.py h","total_count":1,"children":[]}]},{"name":"mic_worker.py","total_count":2,"children":[{"name":".stop()","total_count":1,"children":[]},{"name":"Mikrofonu dinler, transkribe eder.      Sinyaller:         progress(str)","total_count":1,"children":[]}]},{"name":"ollama_client.py","total_count":8,"children":[{"name":"_base_url()","total_count":1,"children":[]},{"name":"Eski modeli unload eder, yeni modeli ısıtır (boş prompt ile).      Sinyaller:","total_count":1,"children":[]},{"name":"fetch_models()","total_count":1,"children":[]},{"name":"Modeli Ollama'dan VRAM'den kaldırır.     keep_alive=0 → model hemen boşaltılır.","total_count":1,"children":[]},{"name":"Ollama'daki kurulu model isimlerini döndürür.","total_count":1,"children":[]},{"name":"Ollama'dan stream ile metin üretir.     Her token gelince stream_callback(token)","total_count":1,"children":[]},{"name":"Sinyaller:         finished(list[str]): model isimleri         error(str)","total_count":1,"children":[]},{"name":"Sinyaller:         token(str)     → her token UI'a anlık iletilir         finish","total_count":1,"children":[]}]},{"name":"settings_manager.py","total_count":6,"children":[{"name":"._save()","total_count":1,"children":[]},{"name":".get()","total_count":1,"children":[]},{"name":".reset()","total_count":1,"children":[]},{"name":".set()","total_count":1,"children":[]},{"name":".set_many()","total_count":1,"children":[]},{"name":"Uygulama ayarlarını okur/yazar.      Kullanım:         sm = SettingsManager.inst","total_count":1,"children":[]}]},{"name":"transcriber.py","total_count":8,"children":[{"name":"_denoise()","total_count":1,"children":[]},{"name":"_detect_device()","total_count":1,"children":[]},{"name":"Donanımı algılar ve uygun compute_type döner.","total_count":1,"children":[]},{"name":"faster-whisper transkripsiyon işlemini arka planda çalıştıran thread.      Sin","total_count":1,"children":[]},{"name":"Ses dosyasını gürültüden arındırır, geçici dosya olarak kaydeder.     Orijinal","total_count":1,"children":[]},{"name":"TranscriptionWorker","total_count":1,"children":[]},{"name":"Transkripsiyon motoru — faster-whisper backend.  Whisper large-v3-turbo modeli","total_count":1,"children":[]},{"name":"Windows'ta ctranslate2'nin (faster-whisper) CUDA 12 DLL'lerini      (cublas64_1","total_count":1,"children":[]}]}]},{"name":"main.py","total_count":4,"children":[{"name":"_create_app()","total_count":1,"children":[]},{"name":"_show_fatal_error()","total_count":1,"children":[]},{"name":"İlk pencere açılmadan çöküşlerde basit bir hata kutusu gösterir.","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]}]},{"name":"settings.json","total_count":7,"children":[{"name":"chunk_threshold","total_count":1,"children":[]},{"name":"hf_cache_dir","total_count":1,"children":[]},{"name":"last_mode","total_count":1,"children":[]},{"name":"output_dir","total_count":1,"children":[]},{"name":"silence_ms","total_count":1,"children":[]},{"name":"tts_model_dir","total_count":1,"children":[]},{"name":"whisper_model","total_count":1,"children":[]}]},{"name":"tts","total_count":51,"children":[{"name":"kokoro_engine.py","total_count":3,"children":[{"name":".voices_for_lang()","total_count":1,"children":[]},{"name":"Belirli dil kodu için ses listesi.","total_count":1,"children":[]},{"name":"Kokoro TTS — ONNX tabanlı, hızlı lokal çıkarım.      XTTSv2 ile farkı:         +","total_count":1,"children":[]}]},{"name":"text_preprocessor.py","total_count":14,"children":[{"name":"._force_split()","total_count":1,"children":[]},{"name":"._split_into_sentences()","total_count":1,"children":[]},{"name":"._word_split()","total_count":1,"children":[]},{"name":".cleanup_chunks()","total_count":1,"children":[]},{"name":".merge_audio_files()","total_count":1,"children":[]},{"name":".split()","total_count":1,"children":[]},{"name":".wav dosyalarını aralarına sessizlik ekleyerek tek dosyada birleştirir.","total_count":1,"children":[]},{"name":"Geçici parça .wav dosyalarını sessizce siler.","total_count":1,"children":[]},{"name":"Metni max_chars'ı aşmayan, anlamlı parçalara böler.          Algoritma:","total_count":1,"children":[]},{"name":"Metni noktalama işaretlerine göre cümlelere ayırır.","total_count":1,"children":[]},{"name":"Son çare: kelime bazında böl.","total_count":1,"children":[]},{"name":"Tek başına max_chars'ı aşan metni önce virgül/noktalı virgülden,         gerekir","total_count":1,"children":[]},{"name":"text_preprocessor.py ==================== Metin ön işleme ve uzun metin bölme (c","total_count":1,"children":[]},{"name":"Uzun metinleri TTS dostu parçalara böler ve ses parçalarını birleştirir.      Ar","total_count":1,"children":[]}]},{"name":"tts_engine.py","total_count":24,"children":[{"name":"_fix_cuda_paths()","total_count":1,"children":[]},{"name":"available_models()","total_count":1,"children":[]},{"name":"Coqui XTTSv2 — lokal CUDA çıkarımı.      Özellikler:         • 16 dil desteği","total_count":1,"children":[]},{"name":"create()","total_count":1,"children":[]},{"name":"Dahili konuşmacı listesi. supports_default_speakers=False ise boş döner.","total_count":1,"children":[]},{"name":"default_speakers()","total_count":1,"children":[]},{"name":"generate()","total_count":1,"children":[]},{"name":"GPU önbelleğini ve Python GC'yi çalıştırır.         Alt sınıflar kendi model nes","total_count":1,"children":[]},{"name":"Hume AI TADA — bulut tabanlı duygusal TTS API.      Kurulum:         pip install","total_count":1,"children":[]},{"name":"HumeTADAEngine","total_count":1,"children":[]},{"name":"load_model()","total_count":1,"children":[]},{"name":"Metni sese çevirir ve dosyaya yazar.          Args:             text:","total_count":1,"children":[]},{"name":"Model kimliği → görünen ad eşlemesi.","total_count":1,"children":[]},{"name":"Model kimliğine göre doğru motor örneğini oluşturan fabrika sınıfı.      Kullanı","total_count":1,"children":[]},{"name":"Modeli yükler. Hata durumunda RuntimeError fırlatır.","total_count":1,"children":[]},{"name":"Motor dahili (isimli) konuşmacıları destekliyor mu?","total_count":1,"children":[]},{"name":"Motor referans wav ile ses klonlamayı destekliyor mu?","total_count":1,"children":[]},{"name":"supports_default_speakers()","total_count":1,"children":[]},{"name":"supports_voice_cloning()","total_count":1,"children":[]},{"name":"tts_engine.py ============= TTS motor fabrikası ve tüm motor implementasyonları.","total_count":1,"children":[]},{"name":"TTSEngineFactory","total_count":1,"children":[]},{"name":"Tüm TTS motorlarının implement etmesi gereken arayüz.      Alt sınıf sorumlulukl","total_count":1,"children":[]},{"name":"Windows'ta cuDNN ve CUDA DLL çakışmalarını (örn. cudnnGetLibConfig hatası)","total_count":1,"children":[]},{"name":"XTTSEngine","total_count":1,"children":[]}]},{"name":"workers.py","total_count":10,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":".run()","total_count":1,"children":[]},{"name":"ChunkedTTSWorker","total_count":1,"children":[]},{"name":"engine.load_model() işlemini arka planda çalıştırır.     GUI thread'ini bloklama","total_count":1,"children":[]},{"name":"engine.unload_model() işlemini arka planda çalıştırır.      Model geçişlerinde e","total_count":1,"children":[]},{"name":"Kısa metinler için engine.generate() işlemini arka planda çalıştırır.      Kulla","total_count":1,"children":[]},{"name":"ModelLoaderWorker","total_count":1,"children":[]},{"name":"ModelUnloaderWorker","total_count":1,"children":[]},{"name":"TTSWorker","total_count":1,"children":[]},{"name":"Uzun metinleri TextPreprocessor ile parçalara böler, her parçayı ayrı     üretir","total_count":1,"children":[]}]}]},{"name":"ui","total_count":174,"children":[{"name":"archive_panel.py","total_count":12,"children":[{"name":"._load_all()","total_count":1,"children":[]},{"name":"._on_delete()","total_count":1,"children":[]},{"name":"._on_search()","total_count":1,"children":[]},{"name":"._on_selection_changed()","total_count":1,"children":[]},{"name":"._populate()","total_count":1,"children":[]},{"name":"._selected_text()","total_count":1,"children":[]},{"name":"._update_stats()","total_count":1,"children":[]},{"name":".add_record()","total_count":1,"children":[]},{"name":"_on_search_done()","total_count":1,"children":[]},{"name":"SearchWorker","total_count":1,"children":[]},{"name":"TranscriptionPanel veya BatchWorker'dan çağrılır.         Transkripsiyon bitince","total_count":1,"children":[]},{"name":"Transkript arşivi sekmesi.      Sinyaller:         text_sent_to_tts(str)","total_count":1,"children":[]}]},{"name":"file_panel.py","total_count":11,"children":[{"name":"._on_add_files()","total_count":1,"children":[]},{"name":"._on_item_double_clicked()","total_count":1,"children":[]},{"name":"._on_send_to_queue()","total_count":1,"children":[]},{"name":"._open_in_explorer()","total_count":1,"children":[]},{"name":"._show_context_menu()","total_count":1,"children":[]},{"name":".refresh_list()","total_count":1,"children":[]},{"name":"Dışarıdan dosya seçip proje klasörüne kopyalar.","total_count":1,"children":[]},{"name":"Seçili dosyaları toplu işlem kuyruğuna gönderir.","total_count":1,"children":[]},{"name":"Sol panel: Kullanıcının işleyeceği ses dosyalarını yönettiği yer.","total_count":1,"children":[]},{"name":"voice_files/ klasörünü tara ve listeyi güncelle.","total_count":1,"children":[]},{"name":"Çift tıklandığında dosyayı ana transkripsiyon paneline gönderir.","total_count":1,"children":[]}]},{"name":"main_window.py","total_count":14,"children":[{"name":"._build_header()","total_count":1,"children":[]},{"name":"._build_tabs()","total_count":1,"children":[]},{"name":"._connect_signals()","total_count":1,"children":[]},{"name":"._setup_status_bar()","total_count":1,"children":[]},{"name":"._setup_window()","total_count":1,"children":[]},{"name":"_on_files_sent_to_queue()","total_count":1,"children":[]},{"name":"_on_mode_selected()","total_count":1,"children":[]},{"name":"_on_pipeline_triggered()","total_count":1,"children":[]},{"name":"_on_ttt_to_tts()","total_count":1,"children":[]},{"name":"Alt durum çubuğu — hazır mesajı ve sonraki ipuçları.","total_count":1,"children":[]},{"name":"Dosyalar kuyruğa eklenince 'Toplu İşlem' sekmesine geç.","total_count":1,"children":[]},{"name":"EchoForge ana penceresi.     Sol taraf: dosya gezgini (FilePanel).     Sağ tar","total_count":1,"children":[]},{"name":"Logo + isim + altyazı içeren ince üst şerit.","total_count":1,"children":[]},{"name":"TranscriptionPanel'den gelen metni TTSPanel'e iletir ve         'Ses Üret' sekm","total_count":1,"children":[]}]},{"name":"queue_panel.py","total_count":16,"children":[{"name":"._cancel_queue()","total_count":1,"children":[]},{"name":"._clear_queue()","total_count":1,"children":[]},{"name":"._set_cell()","total_count":1,"children":[]},{"name":"._start_queue()","total_count":1,"children":[]},{"name":"._update_overall_label()","total_count":1,"children":[]},{"name":".add_files()","total_count":1,"children":[]},{"name":"_on_all_done()","total_count":1,"children":[]},{"name":"_on_file_done()","total_count":1,"children":[]},{"name":"_on_file_error()","total_count":1,"children":[]},{"name":"_on_file_started()","total_count":1,"children":[]},{"name":"_on_progress()","total_count":1,"children":[]},{"name":"FilePanel'den veya drag&drop'tan yeni dosyalar ekler.","total_count":1,"children":[]},{"name":"FileStatus","total_count":1,"children":[]},{"name":"Hücreyi yazar ve durum sütununa renk uygular.","total_count":1,"children":[]},{"name":"Toplu işlem kuyruğu paneli. Dosyaları tabloda listeler; durum, ilerleme ve otom","total_count":1,"children":[]},{"name":"Toplu işlem kuyruğunu yöneten panel.      Sinyaller:         queue_started()","total_count":1,"children":[]}]},{"name":"settings_panel.py","total_count":9,"children":[{"name":"._build_buttons()","total_count":1,"children":[]},{"name":"._build_general_group()","total_count":1,"children":[]},{"name":"._build_stt_group()","total_count":1,"children":[]},{"name":"._build_tts_group()","total_count":1,"children":[]},{"name":"._line_edit_with_browse()","total_count":1,"children":[]},{"name":"._load_values()","total_count":1,"children":[]},{"name":"._on_reset()","total_count":1,"children":[]},{"name":"._on_save()","total_count":1,"children":[]},{"name":"QLineEdit döndürür; dışarıda form'a eklenir.","total_count":1,"children":[]}]},{"name":"transcription_panel.py","total_count":29,"children":[{"name":"._build_srt()","total_count":1,"children":[]},{"name":"._build_vtt()","total_count":1,"children":[]},{"name":"._cancel_transcription()","total_count":1,"children":[]},{"name":"._copy_plain()","total_count":1,"children":[]},{"name":"._copy_srt()","total_count":1,"children":[]},{"name":"._copy_vtt()","total_count":1,"children":[]},{"name":"._save_all()","total_count":1,"children":[]},{"name":"._save_txt()","total_count":1,"children":[]},{"name":"._start_diarization()","total_count":1,"children":[]},{"name":"._start_mic()","total_count":1,"children":[]},{"name":"._start_transcription()","total_count":1,"children":[]},{"name":"._stop_mic()","total_count":1,"children":[]},{"name":"._toggle_mic()","total_count":1,"children":[]},{"name":".set_sts_mode()","total_count":1,"children":[]},{"name":"_fmt_time()","total_count":1,"children":[]},{"name":"_on_diarization_done()","total_count":1,"children":[]},{"name":"_on_error()","total_count":1,"children":[]},{"name":"_on_finished()","total_count":1,"children":[]},{"name":"_on_mic_finished()","total_count":1,"children":[]},{"name":"_on_segment()","total_count":1,"children":[]},{"name":"_on_speaker_segment()","total_count":1,"children":[]},{"name":"_speaker_color()","total_count":1,"children":[]},{"name":"_to_clipboard()","total_count":1,"children":[]},{"name":"Her konuşmacıya tutarlı bir renk atar.","total_count":1,"children":[]},{"name":"on_file_selected()","total_count":1,"children":[]},{"name":"Segment listesinden SRT string üretir (dosyaya yazmadan).","total_count":1,"children":[]},{"name":"STS modunda transkripsiyon bitince otomatik TTS'e gönderir.","total_count":1,"children":[]},{"name":"Transkripsiyon metnini TTS paneline iletir.         MainWindow bu sinyali TTSPa","total_count":1,"children":[]},{"name":"Transkripsiyon çıktısını ve kontrolleri barındıran sağ panel.","total_count":1,"children":[]}]},{"name":"tts_panel.py","total_count":37,"children":[{"name":"._apply_model_switch()","total_count":1,"children":[]},{"name":"._build_generate_row()","total_count":1,"children":[]},{"name":"._build_language_group()","total_count":1,"children":[]},{"name":"._build_left_panel()","total_count":1,"children":[]},{"name":"._build_model_bar()","total_count":1,"children":[]},{"name":"._build_right_panel()","total_count":1,"children":[]},{"name":"._build_text_group()","total_count":1,"children":[]},{"name":"._build_voice_source_group()","total_count":1,"children":[]},{"name":"._log()","total_count":1,"children":[]},{"name":"._on_generate()","total_count":1,"children":[]},{"name":"._on_generation_finished()","total_count":1,"children":[]},{"name":"._on_load_model()","total_count":1,"children":[]},{"name":"._on_model_combo_changed()","total_count":1,"children":[]},{"name":"._on_model_error()","total_count":1,"children":[]},{"name":"._on_model_loaded()","total_count":1,"children":[]},{"name":"._on_model_unloaded()","total_count":1,"children":[]},{"name":"._on_text_changed()","total_count":1,"children":[]},{"name":"._on_unload_error()","total_count":1,"children":[]},{"name":"._on_voice_source_changed()","total_count":1,"children":[]},{"name":"._open_audio_dir()","total_count":1,"children":[]},{"name":"._open_reference_voices_dir()","total_count":1,"children":[]},{"name":"._refresh_voice_files()","total_count":1,"children":[]},{"name":"._restore_default_languages()","total_count":1,"children":[]},{"name":"._set_busy()","total_count":1,"children":[]},{"name":"._set_kokoro_languages()","total_count":1,"children":[]},{"name":"._setup_ui()","total_count":1,"children":[]},{"name":"._setup_watcher()","total_count":1,"children":[]},{"name":"._update_voice_source_ui()","total_count":1,"children":[]},{"name":"._update_voice_ui_for_model()","total_count":1,"children":[]},{"name":"_open_folder()","total_count":1,"children":[]},{"name":"Log alanına renkli mesaj ekler, otomatik kaydırır.","total_count":1,"children":[]},{"name":"Radio seçimine göre speaker_combo / voice_file_combo aktif eder.","total_count":1,"children":[]},{"name":"receive_text()","total_count":1,"children":[]},{"name":"reference_voices/ klasöründeki .wav listesini yeniler.","total_count":1,"children":[]},{"name":"Ses üretimi paneli.      Dışarıdan bağlanılacak slot:         receive_text(st","total_count":1,"children":[]},{"name":"Seçili motor kapasitelerine göre ses kaynağı UI'ını günceller.         engine=N","total_count":1,"children":[]},{"name":"Transkripsiyon panelinden \"→ TTS'e Gönder\" sinyaliyle tetiklenir.         Mevcu","total_count":1,"children":[]}]},{"name":"ttt_panel.py","total_count":26,"children":[{"name":"._build_free_mode()","total_count":1,"children":[]},{"name":"._build_quick_actions()","total_count":1,"children":[]},{"name":"._build_text_area()","total_count":1,"children":[]},{"name":"._copy_output()","total_count":1,"children":[]},{"name":"._get_backend()","total_count":1,"children":[]},{"name":"._on_backend_changed()","total_count":1,"children":[]},{"name":"._on_model_ready()","total_count":1,"children":[]},{"name":"._on_switch_error()","total_count":1,"children":[]},{"name":"._output_to_input()","total_count":1,"children":[]},{"name":"._run_free()","total_count":1,"children":[]},{"name":"._run_quick()","total_count":1,"children":[]},{"name":"._run_translate()","total_count":1,"children":[]},{"name":"._send_to_tts()","total_count":1,"children":[]},{"name":"._set_generating()","total_count":1,"children":[]},{"name":"._start_generation()","total_count":1,"children":[]},{"name":"._stop_generation()","total_count":1,"children":[]},{"name":"_on_fetch_error()","total_count":1,"children":[]},{"name":"_on_first_token()","total_count":1,"children":[]},{"name":"_on_generation_done()","total_count":1,"children":[]},{"name":"_on_generation_error()","total_count":1,"children":[]},{"name":"_on_models_fetched()","total_count":1,"children":[]},{"name":"_on_token()","total_count":1,"children":[]},{"name":"İlk token geldiğinde süreyi göster.","total_count":1,"children":[]},{"name":"Metin → Metin paneli.      Dışarıdan metin almak için:         panel.receive_tex","total_count":1,"children":[]},{"name":"TranscriptionPanel veya dışarıdan metin alır.","total_count":1,"children":[]},{"name":"TTTPanel","total_count":1,"children":[]}]},{"name":"waveform_widget.py","total_count":12,"children":[{"name":"._draw()","total_count":1,"children":[]},{"name":"._show_empty()","total_count":1,"children":[]},{"name":".clear()","total_count":1,"children":[]},{"name":".load()","total_count":1,"children":[]},{"name":"_downsample()","total_count":1,"children":[]},{"name":"Bir ses dosyasının stereo/mono dalga formunu çizen widget.      Kullanım:","total_count":1,"children":[]},{"name":"Görünürlüğü dosya varlığına göre değiştirir.         is_empty=True  -> 'Dalga f","total_count":1,"children":[]},{"name":"Performans için veriyi max_samples altına indirir.         Her bloktaki min/max","total_count":1,"children":[]},{"name":"Ses dosyasını okur ve dalga formunu çizer.","total_count":1,"children":[]},{"name":"Ses dosyasının dalga formunu (waveform) gösteren widget. pyqtgraph kullanır — m","total_count":1,"children":[]},{"name":"Verilen mono numpy dizisini çizer.","total_count":1,"children":[]},{"name":"Widget'ı boş duruma getirir.","total_count":1,"children":[]}]},{"name":"welcome_panel.py","total_count":6,"children":[{"name":"._apply_style()","total_count":1,"children":[]},{"name":".enterEvent()","total_count":1,"children":[]},{"name":".leaveEvent()","total_count":1,"children":[]},{"name":".mousePressEvent()","total_count":1,"children":[]},{"name":"Açılış ekranı — 4 mod kartı gösterir.      Sinyaller:         mode_selected(str)","total_count":1,"children":[]},{"name":"ModeCard","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]},{"name":"styles.py","total_count":1,"children":[]}]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>
