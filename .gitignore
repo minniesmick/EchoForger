@@ -22,6 +22,7 @@ env/
 voice_files/
 reference_voices/
 output/
+yeniler/
 settings.json
 
 # ── Model Dosyaları ───────────────────────────────────────
@@ -56,3 +57,4 @@ desktop.ini
 *.log
 _chunks_tmp/
 *.tmp
+node_modules/
